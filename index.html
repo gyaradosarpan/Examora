@@ -10,7 +10,7 @@
 <body class="landing">
   <header class="landing-nav">
     <a class="brand" href="#"><span class="brand-mark">E</span><span>Examora</span></a>
-    <div class="top-actions"><span class="secure-pill">Free • GitHub Pages Ready</span><button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark mode">◐</button></div>
+    <div class="top-actions"><button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark mode">◐</button></div>
   </header>
 
   <main class="hero">
@@ -23,22 +23,39 @@
         <a class="btn btn-secondary" href="student.html">Student Portal</a>
       </div>
       <div class="feature-row">
-        <span>✓ Server-ready architecture</span>
-        <span>✓ Responsive UI</span>
-        <span>✓ No paid API required</span>
+        <span><i>✓</i> Room-based & timed exams</span>
+        <span><i>✓</i> Auto-save & review tools</span>
+        <span><i>✓</i> Automatic + teacher marking</span>
       </div>
     </section>
-    <section class="portal-preview">
+    <section class="portal-preview" aria-label="Examora live dashboard preview">
       <div class="preview-window">
-        <div class="preview-top"><span></span><span></span><span></span></div>
+        <div class="preview-top"><span></span><span></span><span></span><em>EXAMORA LIVE PREVIEW</em></div>
         <div class="preview-content">
-          <div class="preview-sidebar"></div>
+          <div class="preview-sidebar">
+            <div class="mini-logo">E</div>
+            <div class="mini-nav active"></div><div class="mini-nav"></div><div class="mini-nav"></div><div class="mini-nav short"></div>
+          </div>
           <div class="preview-main">
-            <div class="skeleton wide"></div>
-            <div class="preview-grid"><div></div><div></div><div></div></div>
-            <div class="skeleton"></div><div class="skeleton"></div>
+            <div class="mini-head"><div><small>EXAMINER DASHBOARD</small><strong>Good morning, Examiner</strong></div><b class="mini-live"><span></span> LIVE</b></div>
+            <div class="preview-grid">
+              <div class="mini-stat"><small>ACTIVE ROOMS</small><strong>03</strong><span>+2 today</span></div>
+              <div class="mini-stat"><small>STUDENTS</small><strong>127</strong><span>Currently joined</span></div>
+              <div class="mini-stat"><small>SUBMISSIONS</small><strong>84%</strong><span>On track</span></div>
+            </div>
+            <div class="mini-exam-card">
+              <div class="mini-exam-title"><div><span class="mini-dot"></span><b>Cyber Security — Mid Term</b></div><strong class="mini-timer">48:32</strong></div>
+              <div class="mini-progress"><span></span></div>
+              <div class="mini-exam-meta"><span>Question 12 / 50</span><span>32 students online</span><span class="mini-saved">✓ Answers saved</span></div>
+            </div>
+            <div class="mini-question">
+              <div><small>QUESTION 12 • MCQ • 2 MARKS</small><b>Which security principle ensures users receive only the access they need?</b></div>
+              <div class="mini-options"><span class="selected">A&nbsp; Least privilege</span><span>B&nbsp; Encryption</span><span>C&nbsp; Backups</span></div>
+            </div>
           </div>
         </div>
+        <div class="preview-float float-one">✓ Answer saved</div>
+        <div class="preview-float float-two">● 32 students online</div>
       </div>
     </section>
   </main>
