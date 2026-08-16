@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Examora — Student Portal</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="student-theme">
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-mark">E</span><span>Examora</span></a>
+  <div class="top-actions"><span class="user-chip">Student</span><button class="icon-btn" onclick="toggleTheme()">◐</button></div>
+</header>
+<div class="app-shell">
+  <aside class="sidebar">
+    <nav>
+      <button class="nav-item active" data-view="student-dashboard"><span>⌂</span>Dashboard</button>
+      <button class="nav-item" data-view="join"><span>↗</span>Join Exam</button>
+      <button class="nav-item" data-view="history"><span>▤</span>Exam History</button>
+      <button class="nav-item" data-view="profile"><span>○</span>Profile</button>
+    </nav>
+    <div class="sidebar-bottom"><a href="examiner.html">Examiner Portal →</a><a href="index.html">Back to Home</a></div>
+  </aside>
+  <main class="content">
+    <section id="view-student-dashboard" class="view active">
+      <div class="page-head"><div><div class="eyebrow">STUDENT PORTAL</div><h1>Welcome, Student</h1><p>Join your room and complete examinations securely.</p></div><button class="btn btn-student" onclick="showView('join')">Join an Exam</button></div>
+      <div class="student-banner"><div><span class="banner-icon">✓</span><div><b>Ready for your next exam?</b><p>Enter the room code and password supplied by your examiner.</p></div></div><button class="btn btn-student" onclick="showView('join')">Join Room</button></div>
+      <div class="section-card"><div class="section-title"><h2>Available Examinations</h2></div><div id="studentExamList"></div></div>
+      <div class="section-card"><div class="section-title"><h2>My Results</h2></div><div id="studentResults"></div></div>
+    </section>
+    <section id="view-join" class="view">
+      <div class="center-wrap"><div class="join-card"><div class="join-icon">↗</div><div class="eyebrow">EXAM ROOM</div><h1>Join an examination</h1><p>Use the room code and password provided by your examiner.</p><form id="joinForm"><label>Room code<input id="roomCode" required maxlength="8" placeholder="7K92Q"></label><label>Room password<input id="roomPassword" required type="password" placeholder="••••"></label><button class="btn btn-student full">Verify & Continue</button></form><div id="joinMessage"></div></div></div>
+    </section>
+    <section id="view-history" class="view"><div class="page-head"><div><div class="eyebrow">HISTORY</div><h1>Exam history</h1></div></div><div class="section-card"><div id="historyList"></div></div></section>
+    <section id="view-profile" class="view"><div class="page-head"><div><div class="eyebrow">PROFILE</div><h1>Student profile</h1></div></div><div class="section-card profile-card"><div class="avatar">S</div><div><h2>Demo Student</h2><p>student@example.com</p><p>Candidate: EX-2026-0001</p></div></div></section>
+  </main>
+</div>
+<script src="assets/app.js"></script><script>initStudent();</script>
+</body>
+</html>
