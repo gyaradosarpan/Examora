@@ -7,99 +7,652 @@
 <meta name="description" content="Free, modern online examination portal with Examiner and Student portals.">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
+
 <body class="landing">
+
 <header class="landing-nav">
-<a class="brand" href="#"><span class="brand-mark">E</span><span>Examora</span></a>
-<div class="top-actions"><button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark mode">◐</button></div>
+  <a class="brand" href="#">
+    <span class="brand-mark">E</span>
+    <span>Examora</span>
+  </a>
+
+  <div class="top-actions">
+    <button
+      class="icon-btn"
+      onclick="toggleTheme()"
+      title="Toggle theme"
+      aria-label="Toggle dark mode">
+      ◐
+    </button>
+  </div>
 </header>
 
+
 <main class="hero">
-<section class="hero-copy">
-<div class="eyebrow">ONLINE EXAMINATION PLATFORM</div>
-<h1>Examinations, <span>made simple.</span></h1>
-<p>Create exam rooms, invite students with a secure room code, conduct timed exams and publish results — all from a clean, responsive interface.</p>
-<div class="hero-actions">
-<a class="btn btn-primary" href="examiner.html">Examiner Portal</a>
-<a class="btn btn-secondary" href="student.html">Student Portal</a>
-</div>
-<div class="feature-row">
-<span><i>✓</i> Room-based & timed exams</span>
-<span><i>✓</i> Auto-save & review tools</span>
-<span><i>✓</i> Automatic + teacher marking</span>
-</div>
-</section>
 
-<section class="portal-preview" aria-label="Examora feature preview">
-  <div class="preview-window final-preview">
-    <div class="preview-top final-preview-top">
-      <span></span><span></span><span></span><em>EXAMORA</em>
+  <!-- =========================
+       HERO TEXT
+  ========================== -->
+  <section class="hero-copy">
+
+    <div class="eyebrow">
+      ONLINE EXAMINATION PLATFORM
     </div>
-    <div class="preview-stage">
-      <div class="preview-side">
-        <div class="mini-logo">E</div>
-        <div class="side-pill active"></div>
-        <div class="side-pill"></div>
-        <div class="side-pill"></div>
-        <div class="side-pill short"></div>
-        <div class="side-bottom"></div>
+
+    <h1>
+      Examinations, <span>made simple.</span>
+    </h1>
+
+    <p>
+      Create exam rooms, invite students with a secure room code,
+      conduct timed exams and publish results — all from a clean,
+      responsive interface.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="examiner.html">
+        Examiner Portal
+      </a>
+
+      <a class="btn btn-secondary" href="student.html">
+        Student Portal
+      </a>
+    </div>
+
+    <div class="feature-row">
+      <span><i>✓</i> Room-based & timed exams</span>
+      <span><i>✓</i> Auto-save & review tools</span>
+      <span><i>✓</i> Automatic + teacher marking</span>
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       ANIMATED PORTAL PREVIEW
+  ========================== -->
+  <section
+    class="portal-preview"
+    aria-label="Animated Examora feature preview">
+
+    <div class="preview-window final-preview">
+
+      <!-- Browser top -->
+      <div class="preview-top final-preview-top">
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <em>EXAMORA LIVE PREVIEW</em>
       </div>
 
-      <div class="feature-stage">
-        <div class="feature-step step-create">
-          <div class="step-head"><span class="step-number">01</span><div><small>EXAMINER PORTAL</small><b>Create an exam</b></div></div>
-          <p>Build an examination with your own questions, marks, duration and question types.</p>
-          <div class="fake-form">
-            <div><small>EXAM TITLE</small><b>Cyber Security — Mid Term</b></div>
-            <div class="fake-row"><span>60 minutes</span><span>25 questions</span></div>
-            <div class="type-row"><i>MCQ</i><i>True / False</i><i>SAQ</i><i>LAQ</i><i>Numerical</i></div>
+
+      <!-- Preview application -->
+      <div class="preview-stage">
+
+        <!-- Sidebar -->
+        <div class="preview-side">
+
+          <div class="mini-logo">
+            E
           </div>
-          <div class="step-tag">✓ Questions & marks configured</div>
+
+          <div class="side-pill active"></div>
+          <div class="side-pill"></div>
+          <div class="side-pill"></div>
+          <div class="side-pill short"></div>
+
+          <div class="side-bottom"></div>
+
         </div>
 
-        <div class="feature-step step-room">
-          <div class="step-head"><span class="step-number">02</span><div><small>SECURE EXAM ROOM</small><b>Conduct the examination</b></div></div>
-          <p>Students enter a room code and password, then complete the exam within the set time.</p>
-          <div class="room-box"><div><small>ROOM CODE</small><strong>EXM7K9</strong></div><div><small>PASSWORD</small><strong>••••••</strong></div><div><small>DURATION</small><strong>60:00</strong></div></div>
-          <div class="timer-line"><span></span><b>Timer running</b><em>Answer saved</em></div>
-        </div>
 
-        <div class="feature-step step-evaluate">
-          <div class="step-head"><span class="step-number">03</span><div><small>EVALUATION</small><b>Automatic + teacher marking</b></div></div>
-          <p>Objective answers can be checked automatically while written answers are sent to the examiner.</p>
-          <div class="eval-box">
-            <div class="eval-item"><span class="eval-check">✓</span><div><b>MCQ / True-False / Numerical</b><small>Automatically evaluated</small></div></div>
-            <div class="eval-item manual"><span class="eval-review">✎</span><div><b>SAQ / LAQ</b><small>Awaiting teacher review</small></div></div>
+        <!-- Main preview -->
+        <div class="feature-stage">
+
+
+          <!-- ==================================
+               STEP 01
+          =================================== -->
+          <div
+            class="feature-step step-create"
+            data-step="0">
+
+            <div class="step-head">
+
+              <span class="step-number">
+                01
+              </span>
+
+              <div>
+                <small>EXAMINER PORTAL</small>
+                <b>Create an exam</b>
+              </div>
+
+            </div>
+
+            <p>
+              Build an examination with your own questions,
+              marks, duration and question types.
+            </p>
+
+
+            <div class="fake-form">
+
+              <div>
+                <small>EXAM TITLE</small>
+                <b>Cyber Security — Mid Term</b>
+              </div>
+
+              <div class="fake-row">
+                <span>60 minutes</span>
+                <span>25 questions</span>
+              </div>
+
+              <div class="type-row">
+                <i>MCQ</i>
+                <i>True / False</i>
+                <i>SAQ</i>
+                <i>LAQ</i>
+                <i>Numerical</i>
+              </div>
+
+            </div>
+
+
+            <div class="step-tag">
+              ✓ Questions & marks configured
+            </div>
+
           </div>
-          <div class="mark-line"><span>Evaluation progress</span><b>Objective checked • Written pending</b></div>
+
+
+
+          <!-- ==================================
+               STEP 02
+          =================================== -->
+          <div
+            class="feature-step step-room"
+            data-step="1">
+
+            <div class="step-head">
+
+              <span class="step-number">
+                02
+              </span>
+
+              <div>
+                <small>SECURE EXAM ROOM</small>
+                <b>Conduct the examination</b>
+              </div>
+
+            </div>
+
+            <p>
+              Students enter a room code and password,
+              then complete the exam within the set time.
+            </p>
+
+
+            <div class="room-box">
+
+              <div>
+                <small>ROOM CODE</small>
+                <strong>EXM7K9</strong>
+              </div>
+
+              <div>
+                <small>PASSWORD</small>
+                <strong>••••••</strong>
+              </div>
+
+              <div>
+                <small>DURATION</small>
+                <strong>60:00</strong>
+              </div>
+
+            </div>
+
+
+            <div class="timer-line">
+              <span></span>
+              <b>Timer running</b>
+              <em>Answer saved</em>
+            </div>
+
+          </div>
+
+
+
+          <!-- ==================================
+               STEP 03
+          =================================== -->
+          <div
+            class="feature-step step-evaluate"
+            data-step="2">
+
+            <div class="step-head">
+
+              <span class="step-number">
+                03
+              </span>
+
+              <div>
+                <small>EVALUATION</small>
+                <b>Automatic + teacher marking</b>
+              </div>
+
+            </div>
+
+            <p>
+              Objective answers can be checked automatically
+              while written answers are sent to the examiner.
+            </p>
+
+
+            <div class="eval-box">
+
+              <div class="eval-item">
+
+                <span class="eval-check">
+                  ✓
+                </span>
+
+                <div>
+                  <b>MCQ / True-False / Numerical</b>
+                  <small>Automatically evaluated</small>
+                </div>
+
+              </div>
+
+
+              <div class="eval-item manual">
+
+                <span class="eval-review">
+                  ✎
+                </span>
+
+                <div>
+                  <b>SAQ / LAQ</b>
+                  <small>Awaiting teacher review</small>
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div class="mark-line">
+              <span>Evaluation progress</span>
+              <b>Objective checked • Written pending</b>
+            </div>
+
+          </div>
+
+
+
+          <!-- ==================================
+               STEP 04
+          =================================== -->
+          <div
+            class="feature-step step-results"
+            data-step="3">
+
+            <div class="step-head">
+
+              <span class="step-number">
+                04
+              </span>
+
+              <div>
+                <small>RESULTS</small>
+                <b>Review before publishing</b>
+              </div>
+
+            </div>
+
+            <p>
+              See each student's answers, question number,
+              marks and teacher evaluation in one place.
+            </p>
+
+
+            <div class="result-box">
+
+              <div>
+                <small>QUESTIONS</small>
+                <strong>25</strong>
+              </div>
+
+              <div>
+                <small>AUTO MARKED</small>
+                <strong>18</strong>
+              </div>
+
+              <div>
+                <small>TEACHER REVIEW</small>
+                <strong>7</strong>
+              </div>
+
+            </div>
+
+
+            <div class="result-ready">
+              ✓ Result ready for examiner review
+            </div>
+
+          </div>
+
+
+
+          <!-- ==================================
+               ANIMATION DOTS
+          =================================== -->
+          <div class="feature-dots">
+
+            <span
+              class="active"
+              data-dot="0"></span>
+
+            <span
+              data-dot="1"></span>
+
+            <span
+              data-dot="2"></span>
+
+            <span
+              data-dot="3"></span>
+
+          </div>
+
+
+
+          <!-- ==================================
+               SAMPLE EXAM QUESTION
+          =================================== -->
+          <div class="sample-question">
+
+            <div class="sample-top">
+
+              <span>
+                <i></i>
+                SAMPLE EXAM
+              </span>
+
+              <b>
+                <span id="previewTimer">
+                  60:00
+                </span>
+              </b>
+
+            </div>
+
+
+            <div class="sample-meta">
+
+              QUESTION
+              <span>12 / 25</span>
+
+              <span>•</span>
+
+              MCQ
+
+              <span>•</span>
+
+              2 MARKS
+
+              <em>
+                ✓ Answer saved
+              </em>
+
+            </div>
+
+
+            <strong>
+              Which security principle ensures users receive
+              only the access they need?
+            </strong>
+
+
+            <div class="sample-options">
+
+              <span class="chosen">
+                A&nbsp; Least privilege
+              </span>
+
+              <span>
+                B&nbsp; Encryption
+              </span>
+
+              <span>
+                C&nbsp; Backups
+              </span>
+
+            </div>
+
+          </div>
+
         </div>
 
-        <div class="feature-step step-results">
-          <div class="step-head"><span class="step-number">04</span><div><small>RESULTS</small><b>Review before publishing</b></div></div>
-          <p>See each student's answers, question number, marks and teacher evaluation in one place.</p>
-          <div class="result-box"><div><small>QUESTIONS</small><strong>25</strong></div><div><small>AUTO MARKED</small><strong>18</strong></div><div><small>TEACHER REVIEW</small><strong>7</strong></div></div>
-          <div class="result-ready">✓ Result ready for examiner review</div>
-        </div>
-
-        <div class="feature-dots"><span></span><span></span><span></span><span></span></div>
-
-        <div class="sample-question">
-          <div class="sample-top"><span><i></i> SAMPLE EXAM</span><b>60:00</b></div>
-          <div class="sample-meta">QUESTION 12 / 25 <span>•</span> MCQ <span>•</span> 2 MARKS <em>✓ Answer saved</em></div>
-          <strong>Which security principle ensures users receive only the access they need?</strong>
-          <div class="sample-options"><span class="chosen">A&nbsp; Least privilege</span><span>B&nbsp; Encryption</span><span>C&nbsp; Backups</span></div>
-        </div>
       </div>
+
     </div>
-  </div>
-</section>
+
+  </section>
+
 </main>
 
+
+
+<!-- =========================
+     FEATURES
+========================== -->
+
 <section class="landing-features">
-<article><b>Secure Exam Rooms</b><p>Create a dedicated room with a unique code and password for students.</p></article>
-<article><b>Multiple Question Types</b><p>Support MCQ, True / False, Numerical, SAQ and LAQ questions with appropriate evaluation.</p></article>
-<article><b>Results & Teacher Review</b><p>Automatically evaluate objective questions and send written answers to the examiner for manual marking.</p></article>
+
+  <article>
+
+    <b>
+      Secure Exam Rooms
+    </b>
+
+    <p>
+      Create a dedicated room with a unique code
+      and password for students.
+    </p>
+
+  </article>
+
+
+  <article>
+
+    <b>
+      Multiple Question Types
+    </b>
+
+    <p>
+      Support MCQ, True / False, Numerical, SAQ
+      and LAQ questions with appropriate evaluation.
+    </p>
+
+  </article>
+
+
+  <article>
+
+    <b>
+      Results & Teacher Review
+    </b>
+
+    <p>
+      Automatically evaluate objective questions
+      and send written answers to the examiner
+      for manual marking.
+    </p>
+
+  </article>
+
 </section>
 
-<script src="assets/app.js"></script><script>restoreTheme();</script>
+
+
+<script src="assets/app.js"></script>
+
+<script>
+/* =========================================================
+   EXAMORA LANDING PAGE PREVIEW ANIMATION
+   ========================================================= */
+
+(function () {
+
+  const steps = Array.from(
+    document.querySelectorAll(".feature-step")
+  );
+
+  const dots = Array.from(
+    document.querySelectorAll(".feature-dots span")
+  );
+
+  if (!steps.length) return;
+
+
+  let currentStep = 0;
+
+  const STEP_TIME = 4200;
+
+
+  function showStep(index) {
+
+    currentStep = index;
+
+
+    steps.forEach((step, i) => {
+
+      step.classList.toggle(
+        "preview-active",
+        i === index
+      );
+
+      step.classList.toggle(
+        "preview-hidden",
+        i !== index
+      );
+
+    });
+
+
+    dots.forEach((dot, i) => {
+
+      dot.classList.toggle(
+        "active",
+        i === index
+      );
+
+    });
+
+  }
+
+
+  function nextStep() {
+
+    const next =
+      (currentStep + 1) % steps.length;
+
+    showStep(next);
+
+  }
+
+
+  /* Start with first animation */
+  showStep(0);
+
+
+  /* Automatically move through all 4 sections */
+  let animationTimer =
+    setInterval(nextStep, STEP_TIME);
+
+
+  /* Pause when user leaves the tab */
+  document.addEventListener(
+    "visibilitychange",
+    function () {
+
+      if (document.hidden) {
+
+        clearInterval(animationTimer);
+
+      } else {
+
+        clearInterval(animationTimer);
+
+        animationTimer =
+          setInterval(nextStep, STEP_TIME);
+
+      }
+
+    }
+  );
+
+
+  /* Allow clicking animation dots */
+  dots.forEach((dot, index) => {
+
+    dot.addEventListener("click", function () {
+
+      clearInterval(animationTimer);
+
+      showStep(index);
+
+      animationTimer =
+        setInterval(nextStep, STEP_TIME);
+
+    });
+
+  });
+
+
+  /* Small running timer inside the exam preview */
+  const timer =
+    document.getElementById("previewTimer");
+
+  let seconds = 60 * 60;
+
+
+  if (timer) {
+
+    setInterval(function () {
+
+      seconds--;
+
+      if (seconds < 0) {
+        seconds = 60 * 60;
+      }
+
+      const minutes =
+        Math.floor(seconds / 60);
+
+      const remaining =
+        seconds % 60;
+
+      timer.textContent =
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(remaining).padStart(2, "0");
+
+    }, 1000);
+
+  }
+
+})();
+</script>
+
+
+<script>
+/* Restore saved light/dark theme */
+if (typeof restoreTheme === "function") {
+  restoreTheme();
+}
+</script>
+
 </body>
 </html>
