@@ -6,12 +6,20 @@
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body class="examiner-theme">
-<header class="topbar">
-  <a class="brand" href="index.html"><span class="brand-mark">E</span><span>Examora</span></a>
-  <div class="top-actions"><span id="examinerName" class="user-chip">Examiner</span><button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">◐</button></div>
+<header class="topbar examiner-topbar">
+  <div class="topbar-left">
+    <button class="menu-toggle" id="examinerMenuToggle" type="button" aria-label="Open examiner menu" aria-controls="examinerSidebar" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <a class="brand" href="index.html"><span class="brand-mark">E</span><span>Examora</span></a>
+  </div>
+  <div class="top-actions">
+    <span id="examinerName" class="user-chip">Examiner</span>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark mode">◐</button>
+  </div>
 </header>
 <div class="app-shell">
-  <aside class="sidebar">
+  <aside class="sidebar" id="examinerSidebar">
     <nav>
       <button class="nav-item active" data-view="dashboard"><span>▦</span>Dashboard</button>
       <button class="nav-item" data-view="create"><span>＋</span>Create Exam</button>
@@ -82,14 +90,39 @@
 <div id="questionModal" class="modal hidden"></div>
 
 <script src="assets/app.js"></script>
-<script>initExaminer();</script>
+<script>
+  initExaminer();
 
-<nav class="mobile-examiner-nav" aria-label="Examiner navigation">
-  <button data-view="dashboard" onclick="showView('dashboard')"><span>▦</span><small>Home</small></button>
-  <button data-view="create" onclick="showView('create')"><span>＋</span><small>Create</small></button>
-  <button data-view="questions" onclick="showView('questions')"><span>Q</span><small>Questions</small></button>
-  <button data-view="results" onclick="showView('results')"><span>✓</span><small>Results</small></button>
-  <button data-view="audit" onclick="showView('audit')"><span>◷</span><small>Activity</small></button>
-</nav>
+  (function setupExaminerMobileMenu(){
+    const toggle = document.getElementById('examinerMenuToggle');
+    const sidebar = document.getElementById('examinerSidebar');
+    const backdrop = document.getElementById('examinerSidebarBackdrop');
+
+    function setMenu(open){
+      document.body.classList.toggle('examiner-menu-open', open);
+      toggle?.setAttribute('aria-expanded', String(open));
+    }
+
+    toggle?.addEventListener('click', () => {
+      setMenu(!document.body.classList.contains('examiner-menu-open'));
+    });
+
+    backdrop?.addEventListener('click', () => setMenu(false));
+
+    sidebar?.querySelectorAll('.nav-item, .sidebar-bottom a').forEach(item => {
+      item.addEventListener('click', () => setMenu(false));
+    });
+
+    document.addEventListener('keydown', event => {
+      if(event.key === 'Escape') setMenu(false);
+    });
+
+    window.addEventListener('resize', () => {
+      if(window.innerWidth > 700) setMenu(false);
+    });
+  })();
+</script>
+
+<div class="sidebar-backdrop" id="examinerSidebarBackdrop"></div>
 </body>
 </html>
