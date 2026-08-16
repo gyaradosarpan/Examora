@@ -31,7 +31,13 @@
         <div class="stat-card"><span>Completed</span><strong id="completedCount">0</strong><small>Past examinations</small></div>
         <div class="stat-card"><span>Students</span><strong id="studentCount">0</strong><small>Demo participants</small></div>
       </div>
-      <div class="section-card"><div class="section-title"><h2>Your Examinations</h2><button class="text-btn" onclick="showView('create')">Create another</button></div><div id="examList"></div></div>
+      <div class="quick-actions">
+        <button class="quick-action" onclick="showView('create')"><span class="quick-icon">＋</span><span><b>Create Exam</b><small>Set exam details and create a secure room.</small></span><strong>→</strong></button>
+        <button class="quick-action" onclick="showView('questions')"><span class="quick-icon">Q</span><span><b>Add Questions</b><small>MCQ, True/False, SAQ, LAQ and Numerical.</small></span><strong>→</strong></button>
+        <button class="quick-action" onclick="showView('results')"><span class="quick-icon">✓</span><span><b>Check Results</b><small>Review student answer copies and award marks.</small></span><strong>→</strong></button>
+        <button class="quick-action" onclick="showView('audit')"><span class="quick-icon">◷</span><span><b>Activity Log</b><small>See important examination actions and submissions.</small></span><strong>→</strong></button>
+      </div>
+      <div class="section-card"><div class="section-title"><div><h2>Your Examinations</h2><p class="section-subtitle">Open an exam to see its room credentials and student attempts.</p></div><button class="text-btn" onclick="showView('create')">Create another</button></div><div id="examList"></div></div>
     </section>
 
     <section id="view-create" class="view">
@@ -77,5 +83,13 @@
 
 <script src="assets/app.js"></script>
 <script>initExaminer();</script>
+
+<nav class="mobile-examiner-nav" aria-label="Examiner navigation">
+  <button data-view="dashboard" onclick="showView('dashboard')"><span>▦</span><small>Home</small></button>
+  <button data-view="create" onclick="showView('create')"><span>＋</span><small>Create</small></button>
+  <button data-view="questions" onclick="showView('questions')"><span>Q</span><small>Questions</small></button>
+  <button data-view="results" onclick="showView('results')"><span>✓</span><small>Results</small></button>
+  <button data-view="audit" onclick="showView('audit')"><span>◷</span><small>Activity</small></button>
+</nav>
 </body>
 </html>
