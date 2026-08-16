@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Examora — Live Examination</title><link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="student-theme exam-screen">
+<header class="exam-header"><a class="brand" href="student.html"><span class="brand-mark">E</span><span>Examora</span></a><div><b id="liveExamTitle">Examination</b><span id="saveState" class="save-state">Saved ✓</span></div><div class="timer-box"><small>TIME REMAINING</small><strong id="timer">--:--</strong></div></header>
+<main class="exam-layout">
+<aside class="question-nav"><div class="nav-head"><b>Questions</b><span id="progressText">0 / 0</span></div><div id="questionNavGrid" class="question-grid"></div><div class="legend"><span><i class="dot unanswered"></i>Unanswered</span><span><i class="dot answered"></i>Answered</span><span><i class="dot review"></i>Review</span></div></aside>
+<section class="question-area"><div class="question-top"><span id="questionNumber">Question 1</span><span id="questionMarks">1 mark</span></div><h1 id="questionText">Loading question…</h1><div id="answerArea"></div><div class="question-actions"><button class="btn btn-secondary" onclick="previousQuestion()">← Previous</button><div><button class="btn btn-ghost" onclick="toggleReview()">☆ Mark for review</button><button class="btn btn-student" onclick="nextQuestion()">Save & Next →</button></div></div></section>
+</main>
+<div class="submit-bar"><span><b id="answeredCount">0</b> answered</span><button class="btn btn-danger" onclick="submitExam()">Submit Examination</button></div>
+<script src="assets/app.js"></script><script>initLiveExam();</script>
+</body>
+</html>

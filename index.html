@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Examora — Online Examination Portal</title>
+  <meta name="description" content="Free, modern online examination portal with Examiner and Student portals.">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="landing">
+  <header class="landing-nav">
+    <a class="brand" href="#"><span class="brand-mark">E</span><span>Examora</span></a>
+    <div class="top-actions"><span class="secure-pill">Free • GitHub Pages Ready</span><button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark mode">◐</button></div>
+  </header>
+
+  <main class="hero">
+    <section class="hero-copy">
+      <div class="eyebrow">ONLINE EXAMINATION PLATFORM</div>
+      <h1>Examinations, <span>made simple.</span></h1>
+      <p>Create exam rooms, invite students with a secure room code, conduct timed exams and publish results — all from a clean, responsive interface.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="examiner.html">Examiner Portal</a>
+        <a class="btn btn-secondary" href="student.html">Student Portal</a>
+      </div>
+      <div class="feature-row">
+        <span>✓ Server-ready architecture</span>
+        <span>✓ Responsive UI</span>
+        <span>✓ No paid API required</span>
+      </div>
+    </section>
+    <section class="portal-preview">
+      <div class="preview-window">
+        <div class="preview-top"><span></span><span></span><span></span></div>
+        <div class="preview-content">
+          <div class="preview-sidebar"></div>
+          <div class="preview-main">
+            <div class="skeleton wide"></div>
+            <div class="preview-grid"><div></div><div></div><div></div></div>
+            <div class="skeleton"></div><div class="skeleton"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="landing-features">
+    <article><b>Room-based exams</b><p>Every examination gets its own room, code, password and timer.</p></article>
+    <article><b>Automatic results</b><p>Objective questions are evaluated automatically and scores are calculated.</p></article>
+    <article><b>Built for expansion</b><p>The UI and data model are structured so a real-time backend can be added later.</p></article>
+  </section>
+  <script src="assets/app.js"></script><script>restoreTheme();</script>
+</body>
+</html>

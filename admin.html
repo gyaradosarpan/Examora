@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Examora — Admin Portal</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+.admin-theme{--primary:#7c3aed;--primary2:#5b21b6}
+.admin-accent{background:linear-gradient(135deg,#8b5cf6,#5b21b6)!important}
+.admin-shell{min-height:calc(100vh - 70px)}
+.admin-banner{background:linear-gradient(120deg,#f2eaff,#faf7ff);border:1px solid #e8dcff;border-radius:18px;padding:20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.admin-banner b{color:#5b21b6}.admin-banner p{color:#756a88;font-size:12px;margin:5px 0 0}
+.admin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.admin-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}
+.admin-card strong{font:800 29px "Plus Jakarta Sans";display:block;margin:8px 0}
+.admin-card span{font-size:12px;color:var(--muted)}
+@media(max-width:800px){.admin-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="admin-theme">
+<header class="topbar">
+<a class="brand" href="index.html"><span class="brand-mark admin-accent">E</span><span>Examora</span></a>
+<div class="top-actions"><span class="user-chip">Platform Admin</span><button class="icon-btn" onclick="toggleTheme()">◐</button></div>
+</header>
+<div class="app-shell admin-shell">
+<aside class="sidebar">
+<nav>
+<button class="nav-item active" data-view="admin-dashboard"><span>▦</span>Overview</button>
+<button class="nav-item" data-view="admin-users"><span>○</span>Users</button>
+<button class="nav-item" data-view="admin-rooms"><span>▣</span>Exam Rooms</button>
+<button class="nav-item" data-view="admin-security"><span>◇</span>Security</button>
+</nav>
+<div class="sidebar-bottom"><a href="examiner.html">Examiner Portal →</a><a href="student.html">Student Portal →</a><a href="index.html">Back to Home</a></div>
+</aside>
+<main class="content">
+<section id="view-admin-dashboard" class="view active">
+<div class="page-head"><div><div class="eyebrow">ADMINISTRATION</div><h1>Platform overview</h1><p>Keep the examination platform healthy without adding unnecessary complexity.</p></div></div>
+<div class="admin-banner"><div><b>Admin is optional in the MVP</b><p>This portal is included because it becomes useful once multiple teachers and classes use the platform.</p></div><span class="badge upcoming">SYSTEM ONLINE</span></div>
+<div class="admin-grid">
+<div class="admin-card"><span>Registered Teachers</span><strong id="teachers">1</strong><span>Demo accounts</span></div>
+<div class="admin-card"><span>Registered Students</span><strong id="students">1</strong><span>Demo accounts</span></div>
+<div class="admin-card"><span>Examination Rooms</span><strong id="rooms">0</strong><span>Created rooms</span></div>
+<div class="admin-card"><span>Active Rooms</span><strong id="activeRooms">0</strong><span>Running now</span></div>
+<div class="admin-card"><span>Completed Exams</span><strong id="completedRooms">0</strong><span>Stored results</span></div>
+<div class="admin-card"><span>Security Events</span><strong id="securityEvents">0</strong><span>Recorded audit events</span></div>
+</div>
+</section>
+<section id="view-admin-users" class="view">
+<div class="page-head"><div><div class="eyebrow">USER MANAGEMENT</div><h1>Users</h1><p>Production version can connect these controls to authentication.</p></div></div>
+<div class="section-card">
+<div class="exam-row"><div><b>Demo Examiner</b><div class="exam-meta">examiner@example.com</div></div><span class="badge active">EXAMINER</span><span>Enabled</span><button class="text-btn">Manage</button></div>
+<div class="exam-row"><div><b>Demo Student</b><div class="exam-meta">student@example.com</div></div><span class="badge upcoming">STUDENT</span><span>Enabled</span><button class="text-btn">Manage</button></div>
+</div>
+</section>
+<section id="view-admin-rooms" class="view">
+<div class="page-head"><div><div class="eyebrow">ROOM MONITORING</div><h1>Examination rooms</h1><p>Global room visibility belongs here in the production system.</p></div></div>
+<div class="section-card"><div id="adminRooms"></div></div>
+</section>
+<section id="view-admin-security" class="view">
+<div class="page-head"><div><div class="eyebrow">SECURITY</div><h1>Security activity</h1><p>Review platform-level events and operational activity.</p></div></div>
+<div class="section-card"><div id="adminLogs"></div></div>
+</section>
+</main></div>
+<script src="assets/app.js"></script>
+<script>
+setupNav();restoreTheme();
+function renderAdmin(){
+ const db=getDB(), now=Date.now();
+ db.exams.forEach(x=>{const s=new Date(`${x.date||'2099-01-01'}T${x.startTime||'00:00'}`).getTime();if(s<=now&&s+x.duration*60000>now)x.status='active';else if(s+x.duration*60000<=now)x.status='completed';});
+ saveDB(db);
+ document.getElementById('rooms').textContent=db.exams.length;
+ document.getElementById('activeRooms').textContent=db.exams.filter(x=>x.status==='active').length;
+ document.getElementById('completedRooms').textContent=db.exams.filter(x=>x.status==='completed').length;
+ document.getElementById('securityEvents').textContent=db.logs.length;
+ document.getElementById('adminRooms').innerHTML=db.exams.length?db.exams.map(x=>`<div class="exam-row"><div><b>${esc(x.title)}</b><div class="exam-meta">${x.roomCode} • ${x.subject}</div></div><span class="badge ${x.status}">${x.status}</span><span>${x.duration} min</span><span>${x.date||'—'}</span></div>`).join(''):'<div class="empty">No rooms created yet.</div>';
+ document.getElementById('adminLogs').innerHTML=db.logs.length?db.logs.map(x=>`<div class="audit-row"><b>${esc(x.text)}</b><span class="exam-meta">${x.time}</span></div>`).join(''):'<div class="empty">No security activity recorded.</div>';
+}
+renderAdmin();
+</script>
+</body>
+</html>
