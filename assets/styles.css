@@ -2970,5 +2970,45 @@ body.dark .examora-mobile-drawer-bottom {
         display: none !important;
     }
 }
+/* =========================================================
+   EXAMORA MOBILE MENU — LEFT POSITION FIX
+   ========================================================= */
 
+@media (max-width: 1000px) {
+
+    .topbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 0 16px;
+    }
+
+    #examoraMobileMenuBtn,
+    .examora-mobile-menu-btn {
+        order: 1;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+        margin: 0;
+    }
+
+    .topbar .brand {
+        order: 2;
+        margin: 0;
+    }
+
+    .topbar .top-actions {
+        order: 3;
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+}
 
