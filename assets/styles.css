@@ -523,3 +523,286 @@ body.dark .badge.ready{
         transform: translateX(0);
     }
 }
+/* =========================================================
+   EXAMORA - FINAL WORKING PAGE ANIMATIONS
+   ========================================================= */
+
+/* Make sure hidden views stay hidden */
+.view {
+    display: none !important;
+}
+
+/* Active page */
+.view.active {
+    display: block !important;
+    animation: examoraViewAnimation 0.5s ease-out both !important;
+}
+
+/* Page entrance */
+@keyframes examoraViewAnimation {
+    0% {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* =========================================================
+   DASHBOARD STAT CARDS
+   ========================================================= */
+
+.view.active .stat-card {
+    animation: examoraStatAnimation 0.55s ease-out both;
+}
+
+.view.active .stat-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.view.active .stat-card:nth-child(2) {
+    animation-delay: 0.10s;
+}
+
+.view.active .stat-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.view.active .stat-card:nth-child(4) {
+    animation-delay: 0.20s;
+}
+
+@keyframes examoraStatAnimation {
+    0% {
+        opacity: 0;
+        transform: translateY(25px) scale(0.97);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* =========================================================
+   SECTION CARDS
+   ========================================================= */
+
+.view.active .section-card {
+    animation: examoraSectionAnimation 0.55s ease-out both;
+    animation-delay: 0.08s;
+}
+
+@keyframes examoraSectionAnimation {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* =========================================================
+   EXAM ROWS
+   ========================================================= */
+
+.view.active .exam-row {
+    animation: examoraExamRowAnimation 0.45s ease-out both;
+}
+
+.view.active .exam-row:nth-child(1) {
+    animation-delay: 0.10s;
+}
+
+.view.active .exam-row:nth-child(2) {
+    animation-delay: 0.16s;
+}
+
+.view.active .exam-row:nth-child(3) {
+    animation-delay: 0.22s;
+}
+
+.view.active .exam-row:nth-child(4) {
+    animation-delay: 0.28s;
+}
+
+.view.active .exam-row:nth-child(5) {
+    animation-delay: 0.34s;
+}
+
+@keyframes examoraExamRowAnimation {
+    0% {
+        opacity: 0;
+        transform: translateX(-15px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+
+/* =========================================================
+   BUTTON ANIMATIONS
+   ========================================================= */
+
+.btn,
+.text-btn,
+.nav-item,
+.icon-btn {
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.text-btn:hover {
+    transform: translateX(2px);
+}
+
+.nav-item:hover {
+    transform: translateX(3px);
+}
+
+
+/* =========================================================
+   STAT CARD HOVER
+   ========================================================= */
+
+.stat-card {
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(25, 40, 80, 0.10);
+}
+
+
+/* =========================================================
+   SECTION CARD HOVER
+   ========================================================= */
+
+.section-card {
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+.section-card:hover {
+    box-shadow: 0 12px 30px rgba(25, 40, 80, 0.08);
+}
+
+
+/* =========================================================
+   EXAM ROW HOVER
+   ========================================================= */
+
+.exam-row {
+    transition:
+        background 0.25s ease,
+        transform 0.25s ease;
+}
+
+.exam-row:hover {
+    background: rgba(63, 98, 232, 0.035);
+}
+
+
+/* =========================================================
+   QUESTION TYPE BUTTONS
+   ========================================================= */
+
+.type-pills label {
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+.type-pills label:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(63, 98, 232, 0.10);
+}
+
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+.examora-toast {
+    animation: examoraToastAnimation 0.3s ease-out both;
+}
+
+@keyframes examoraToastAnimation {
+    0% {
+        opacity: 0;
+        transform: translateX(25px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.modal:not(.hidden) .modal-box {
+    animation: examoraModalAnimation 0.3s ease-out both;
+}
+
+@keyframes examoraModalAnimation {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .view.active {
+        animation-duration: 0.4s !important;
+    }
+
+    .view.active .stat-card,
+    .view.active .section-card,
+    .view.active .exam-row {
+        animation-duration: 0.4s;
+    }
+}
