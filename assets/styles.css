@@ -3011,4 +3011,86 @@ body.dark .examora-mobile-drawer-bottom {
         gap: 8px;
     }
 }
+/* =========================================================
+   EXAMORA LIVE PREVIEW — RESULT / MARKSHEET FIX
+   ========================================================= */
 
+.step-results .result-box {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.step-results .result-box > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    text-align: left;
+}
+
+.step-results .result-box small {
+    display: block;
+    font-size: 8px;
+    font-weight: 800;
+    color: #7d899d;
+    white-space: nowrap;
+}
+
+.step-results .result-box strong {
+    display: block;
+    font-size: 20px;
+    line-height: 1;
+    color: #172033;
+}
+
+/* Make the final result status stay below the marksheet */
+.step-results .result-ready {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 12px;
+    box-sizing: border-box;
+}
+
+/* Dark mode */
+body.dark .step-results .result-box > div {
+    background: #101a2b;
+    border-color: #2b3952;
+}
+
+body.dark .step-results .result-box small {
+    color: #8f9db3;
+}
+
+body.dark .step-results .result-box strong {
+    color: #edf3ff;
+}
+
+/* Mobile preview */
+@media (max-width: 600px) {
+
+    .step-results .result-box {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .step-results .result-box > div {
+        padding: 9px 10px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .step-results .result-box strong {
+        font-size: 17px;
+    }
+
+    .step-results .result-ready {
+        font-size: 8px;
+        padding: 7px 9px;
+    }
+}
