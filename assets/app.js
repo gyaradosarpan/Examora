@@ -1,5 +1,9 @@
 const DB_KEY = 'examora_db_v2';
 
+/* =========================================================
+   DATABASE
+   ========================================================= */
+
 function seedDB() {
   return {
     exams: [],
@@ -15,14 +19,35 @@ function seedDB() {
 
 function getDB() {
   try {
-    return JSON.parse(localStorage.getItem(DB_KEY)) || seedDB();
+    const data = JSON.parse(
+      localStorage.getItem(DB_KEY)
+    );
+
+    if (!data) {
+      return seedDB();
+    }
+
+    data.exams ||= [];
+    data.questions ||= [];
+    data.attempts ||= [];
+    data.logs ||= [];
+    data.user ||= {
+      name: 'Demo Examiner',
+      email: 'examiner@example.com'
+    };
+
+    return data;
+
   } catch (e) {
     return seedDB();
   }
 }
 
 function saveDB(db) {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
+  localStorage.setItem(
+    DB_KEY,
+    JSON.stringify(db)
+  );
 }
 
 function logEvent(text) {
@@ -38,6 +63,11 @@ function logEvent(text) {
   saveDB(db);
 }
 
+
+/* =========================================================
+   SECURITY / HELPERS
+   ========================================================= */
+
 function esc(s) {
   return String(s ?? '').replace(
     /[&<>'"]/g,
@@ -51,6 +81,40 @@ function esc(s) {
   );
 }
 
+function uid(prefix = 'id') {
+  return (
+    prefix +
+    '_' +
+    Math.random()
+      .toString(36)
+      .slice(2, 9) +
+    Date.now()
+      .toString(36)
+      .slice(-4)
+  );
+}
+
+function code() {
+  return Math.random()
+    .toString(36)
+    .slice(2, 7)
+    .toUpperCase();
+}
+
+function password() {
+  return String(
+    Math.floor(
+      100000 +
+      Math.random() * 900000
+    )
+  );
+}
+
+
+/* =========================================================
+   THEME
+   ========================================================= */
+
 function toggleTheme() {
   document.body.classList.toggle('dark');
 
@@ -61,54 +125,122 @@ function toggleTheme() {
 }
 
 function restoreTheme() {
-  if (localStorage.getItem('examora_dark') === 'true') {
+  if (
+    localStorage.getItem(
+      'examora_dark'
+    ) === 'true'
+  ) {
     document.body.classList.add('dark');
   }
 }
 
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
 function setupNav() {
-  document.querySelectorAll('.nav-item').forEach(b => {
-    b.addEventListener('click', () => showView(b.dataset.view));
-  });
+
+  document
+    .querySelectorAll('.nav-item')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+          showView(
+            button.dataset.view
+          );
+        }
+      );
+
+    });
+
+  document
+    .querySelectorAll(
+      '.mobile-examiner-nav button'
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+          showView(
+            button.dataset.view
+          );
+        }
+      );
+
+    });
 
   restoreTheme();
 }
 
 function showView(id) {
+
   document
     .querySelectorAll('.view')
-    .forEach(v => v.classList.remove('active'));
+    .forEach(view => {
 
-  const el = document.getElementById('view-' + id);
-
-  if (el) {
-    el.classList.add('active');
-  }
-
-  document.querySelectorAll('.nav-item').forEach(b => {
-    b.classList.toggle(
-      'active',
-      b.dataset.view === id
-    );
-  });
-
-  document
-    .querySelectorAll('.mobile-examiner-nav button')
-    .forEach(b => {
-      b.classList.toggle(
-        'active',
-        b.dataset.view === id
+      view.classList.remove(
+        'active'
       );
+
     });
 
-  if (window.location.hash !== '#' + id) {
-    history.replaceState(null, '', '#' + id);
+  const element =
+    document.getElementById(
+      'view-' + id
+    );
+
+  if (element) {
+    element.classList.add(
+      'active'
+    );
+  }
+
+  document
+    .querySelectorAll('.nav-item')
+    .forEach(button => {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.view === id
+      );
+
+    });
+
+  document
+    .querySelectorAll(
+      '.mobile-examiner-nav button'
+    )
+    .forEach(button => {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.view === id
+      );
+
+    });
+
+  if (
+    window.location.hash !==
+    '#' + id
+  ) {
+
+    history.replaceState(
+      null,
+      '',
+      '#' + id
+    );
+
   }
 
   renderCurrentView(id);
 }
 
 function renderCurrentView(id) {
+
   if (id === 'dashboard') {
     renderExaminerDashboard();
   }
@@ -134,38 +266,58 @@ function renderCurrentView(id) {
   }
 }
 
-function uid(prefix = 'id') {
+
+/* =========================================================
+   EXAM STATUS
+   ========================================================= */
+
+function getExamStartTime(exam) {
+
+  if (
+    !exam ||
+    !exam.date ||
+    !exam.startTime
+  ) {
+    return NaN;
+  }
+
+  return new Date(
+    `${exam.date}T${exam.startTime}`
+  ).getTime();
+}
+
+function getExamEndTime(exam) {
+
+  const start =
+    getExamStartTime(exam);
+
+  if (Number.isNaN(start)) {
+    return NaN;
+  }
+
   return (
-    prefix +
-    '_' +
-    Math.random().toString(36).slice(2, 9) +
-    Date.now().toString(36).slice(-4)
+    start +
+    (Number(exam.duration) || 0) *
+      60000
   );
 }
 
-function code() {
-  return Math.random()
-    .toString(36)
-    .slice(2, 7)
-    .toUpperCase();
-}
+function formatStatus(exam) {
 
-function password() {
-  return String(
-    Math.floor(100000 + Math.random() * 900000)
-  );
-}
-
-function formatStatus(ex) {
   const now = Date.now();
 
-  const start = new Date(
-    `${ex.date}T${ex.startTime}`
-  ).getTime();
+  const start =
+    getExamStartTime(exam);
 
   const end =
-    start +
-    (Number(ex.duration) || 0) * 60000;
+    getExamEndTime(exam);
+
+  if (
+    Number.isNaN(start) ||
+    Number.isNaN(end)
+  ) {
+    return 'upcoming';
+  }
 
   if (now < start) {
     return 'upcoming';
@@ -178,64 +330,143 @@ function formatStatus(ex) {
   return 'completed';
 }
 
+
+/* =========================================================
+   EXAMINER INITIALIZATION
+   ========================================================= */
+
 function initExaminer() {
+
   setupNav();
 
   const db = getDB();
 
-  document.getElementById('examinerName').textContent =
-    db.user.name;
+  const examinerName =
+    document.getElementById(
+      'examinerName'
+    );
 
-  document
-    .getElementById('negative')
-    .addEventListener('change', e => {
-      document.getElementById('negativeMarks').disabled =
-        !e.target.checked;
-    });
+  if (examinerName) {
+    examinerName.textContent =
+      db.user.name;
+  }
 
-  document
-    .getElementById('examForm')
-    .addEventListener('submit', createExam);
+  const negative =
+    document.getElementById(
+      'negative'
+    );
+
+  if (negative) {
+
+    negative.addEventListener(
+      'change',
+      e => {
+
+        const input =
+          document.getElementById(
+            'negativeMarks'
+          );
+
+        if (input) {
+          input.disabled =
+            !e.target.checked;
+        }
+
+      }
+    );
+
+  }
+
+  const examForm =
+    document.getElementById(
+      'examForm'
+    );
+
+  if (examForm) {
+
+    examForm.addEventListener(
+      'submit',
+      createExam
+    );
+
+  }
 
   renderExaminerDashboard();
 
   if (location.hash) {
-    showView(location.hash.slice(1));
+
+    showView(
+      location.hash.slice(1)
+    );
+
   }
 }
 
+
+/* =========================================================
+   CREATE EXAM
+   ========================================================= */
+
 function createExam(e) {
+
   e.preventDefault();
 
   const db = getDB();
 
+  const negativeEnabled =
+    document.getElementById(
+      'negative'
+    )?.checked || false;
+
   const ex = {
+
     id: uid('exam'),
 
-    title: document
-      .getElementById('title')
-      .value
-      .trim(),
+    title:
+      document
+        .getElementById('title')
+        .value
+        .trim(),
 
-    subject: document
-      .getElementById('subject')
-      .value
-      .trim(),
+    subject:
+      document
+        .getElementById('subject')
+        .value
+        .trim(),
 
-    date: document.getElementById('date').value,
+    date:
+      document
+        .getElementById('date')
+        .value,
 
     startTime:
-      document.getElementById('startTime').value,
+      document
+        .getElementById('startTime')
+        .value,
 
     duration:
-      +document.getElementById('duration').value,
+      Number(
+        document
+          .getElementById('duration')
+          .value
+      ),
 
     passing:
-      +document.getElementById('passing').value,
+      Number(
+        document
+          .getElementById('passing')
+          .value
+      ),
 
     maxStudents:
-      document.getElementById('maxStudents').value
-        ? +document.getElementById('maxStudents').value
+      document
+        .getElementById('maxStudents')
+        .value
+        ? Number(
+            document
+              .getElementById('maxStudents')
+              .value
+          )
         : null,
 
     department:
@@ -251,10 +482,18 @@ function createExam(e) {
         .trim(),
 
     negative:
-      document.getElementById('negative').checked,
+      negativeEnabled,
 
     negativeMarks:
-      +document.getElementById('negativeMarks').value,
+      negativeEnabled
+        ? Number(
+            document
+              .getElementById(
+                'negativeMarks'
+              )
+              .value
+          ) || 0
+        : 0,
 
     roomCode: code(),
 
@@ -262,35 +501,78 @@ function createExam(e) {
 
     questionIds: [],
 
-    created: new Date().toISOString()
+    created:
+      new Date().toISOString()
+
   };
+
+  if (
+    !ex.title ||
+    !ex.subject ||
+    !ex.date ||
+    !ex.startTime ||
+    !ex.duration
+  ) {
+
+    alert(
+      'Please fill all required examination fields.'
+    );
+
+    return;
+  }
 
   db.exams.unshift(ex);
 
   saveDB(db);
 
   logEvent(
-    `Created examination “${ex.title}” with room ${ex.roomCode}`
+    `Created examination "${ex.title}" with room ${ex.roomCode}`
   );
 
-  document.getElementById('examForm').reset();
+  const form =
+    document.getElementById(
+      'examForm'
+    );
 
-  document.getElementById(
-    'negativeMarks'
-  ).disabled = true;
+  if (form) {
+    form.reset();
+  }
+
+  const negativeMarks =
+    document.getElementById(
+      'negativeMarks'
+    );
+
+  if (negativeMarks) {
+    negativeMarks.disabled =
+      true;
+  }
 
   renderExaminerDashboard();
 
   showRoomCreated(ex);
 }
 
+
+/* =========================================================
+   ROOM CREATED MODAL
+   ========================================================= */
+
 function showRoomCreated(ex) {
-  const m =
-    document.getElementById('questionModal');
 
-  m.classList.remove('hidden');
+  const modal =
+    document.getElementById(
+      'questionModal'
+    );
 
-  m.innerHTML = `
+  if (!modal) return;
+
+  modal.classList.remove(
+    'hidden'
+  );
+
+  modal.innerHTML = `
+
     <div class="modal-box">
 
       <button
@@ -304,12 +586,14 @@ function showRoomCreated(ex) {
         ROOM CREATED
       </div>
 
-      <h2>${esc(ex.title)}</h2>
+      <h2>
+        ${esc(ex.title)}
+      </h2>
 
       <div class="notice">
         Share these credentials with students.
-        The room code is copyable; the password
-        is intentionally display-only for the examiner.
+        The room code is copyable.
+        Keep the password private.
       </div>
 
       <div
@@ -322,7 +606,10 @@ function showRoomCreated(ex) {
         </div>
 
         <div
-          style="font:800 28px 'Plus Jakarta Sans';margin:7px 0"
+          style="
+            font:800 28px 'Plus Jakarta Sans';
+            margin:7px 0
+          "
         >
           ${esc(ex.roomCode)}
         </div>
@@ -333,10 +620,6 @@ function showRoomCreated(ex) {
         >
           Copy Room Code
         </button>
-
-        <div class="security-note">
-          Password cannot be copied from this screen.
-        </div>
 
       </div>
 
@@ -350,14 +633,18 @@ function showRoomCreated(ex) {
         </div>
 
         <div
-          style="font:800 28px monospace;margin:7px 0;letter-spacing:.08em"
+          style="
+            font:800 28px monospace;
+            margin:7px 0;
+            letter-spacing:.08em
+          "
         >
           ${esc(ex.roomPassword)}
         </div>
 
         <div class="security-note">
-          Keep this password private.
-          You can view it again from the room card.
+          Password is display-only.
+          Keep it private.
         </div>
 
       </div>
@@ -365,7 +652,10 @@ function showRoomCreated(ex) {
       <button
         class="btn btn-secondary full"
         style="margin-top:14px"
-        onclick="closeQuestionModal();showView('dashboard')"
+        onclick="
+          closeQuestionModal();
+          showView('dashboard')
+        "
       >
         Continue to Dashboard
       </button>
@@ -374,132 +664,286 @@ function showRoomCreated(ex) {
   `;
 }
 
-function copyRoomCode(v, btn = null) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(v).catch(() => {});
-  }
 
-  logEvent(`Copied room code ${v}`);
+/* =========================================================
+   COPY ROOM CODE
+   ========================================================= */
 
-  if (btn) {
-    const oldText = btn.textContent;
+function copyRoomCode(
+  value,
+  button = null
+) {
 
-    btn.textContent = 'Copied ✓';
+  const copy = () => {
 
-    setTimeout(() => {
-      btn.textContent = oldText;
-    }, 1200);
+    logEvent(
+      `Copied room code ${value}`
+    );
+
+    if (button) {
+
+      const oldText =
+        button.textContent;
+
+      button.textContent =
+        'Copied ✓';
+
+      setTimeout(() => {
+
+        button.textContent =
+          oldText;
+
+      }, 1200);
+
+    }
+
+  };
+
+  if (
+    navigator.clipboard &&
+    window.isSecureContext
+  ) {
+
+    navigator.clipboard
+      .writeText(value)
+      .then(copy)
+      .catch(() => {
+        fallbackCopy(value);
+        copy();
+      });
+
+  } else {
+
+    fallbackCopy(value);
+    copy();
+
   }
 }
 
-function renderExaminerDashboard() {
-  const db = getDB();
+function fallbackCopy(text) {
 
-  db.exams.forEach(x => {
-    x.status = formatStatus(x);
-  });
+  const textarea =
+    document.createElement(
+      'textarea'
+    );
 
-  saveDB(db);
+  textarea.value = text;
 
-  document.getElementById('activeCount').textContent =
-    db.exams.filter(
-      x => x.status === 'active'
-    ).length;
+  textarea.style.position =
+    'fixed';
 
-  document.getElementById('upcomingCount').textContent =
-    db.exams.filter(
-      x => x.status === 'upcoming'
-    ).length;
+  textarea.style.opacity = '0';
 
-  document.getElementById('completedCount').textContent =
-    db.exams.filter(
-      x => x.status === 'completed'
-    ).length;
+  document.body.appendChild(
+    textarea
+  );
 
-  document.getElementById('studentCount').textContent =
-    new Set(
-      db.attempts.map(a => a.studentEmail)
-    ).size;
+  textarea.select();
 
-  const box =
-    document.getElementById('examList');
+  try {
+    document.execCommand(
+      'copy'
+    );
+  } catch (e) {}
 
-  if (!db.exams.length) {
-    box.innerHTML =
-      '<div class="empty">No examinations yet. Create your first exam room.</div>';
-
-    return;
-  }
-
-  box.innerHTML = db.exams
-    .map(
-      ex => `
-      <div class="exam-row">
-
-        <div>
-          <b>${esc(ex.title)}</b>
-
-          <div class="exam-meta">
-            ${esc(ex.subject)}
-            • ${esc(ex.date)}
-            ${esc(ex.startTime)}
-            • Room ${esc(ex.roomCode)}
-          </div>
-        </div>
-
-        <span class="badge ${ex.status}">
-          ${ex.status}
-        </span>
-
-        <div class="room-secret">
-          <span class="exam-meta">
-            Password
-          </span>
-
-          <span class="secret-value">
-            ${esc(ex.roomPassword)}
-          </span>
-        </div>
-
-        <span>
-          ${ex.questionIds.length} questions
-        </span>
-
-        <div class="room-actions">
-
-          <button
-            class="text-btn"
-            onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
-          >
-            Copy code
-          </button>
-
-          <button
-            class="text-btn"
-            onclick="viewRoom('${ex.id}')"
-          >
-            View
-          </button>
-
-        </div>
-
-      </div>
-    `
-    )
-    .join('');
+  textarea.remove();
 }
 
 
 /* =========================================================
-   UPDATED VIEW ROOM FUNCTION
+   EXAMINER DASHBOARD
+   ========================================================= */
+
+function renderExaminerDashboard() {
+
+  const db = getDB();
+
+  const active =
+    db.exams.filter(
+      x =>
+        formatStatus(x) ===
+        'active'
+    ).length;
+
+  const upcoming =
+    db.exams.filter(
+      x =>
+        formatStatus(x) ===
+        'upcoming'
+    ).length;
+
+  const completed =
+    db.exams.filter(
+      x =>
+        formatStatus(x) ===
+        'completed'
+    ).length;
+
+  const students =
+    new Set(
+      db.attempts.map(
+        a => a.studentEmail
+      )
+    ).size;
+
+  const activeCount =
+    document.getElementById(
+      'activeCount'
+    );
+
+  if (activeCount) {
+    activeCount.textContent =
+      active;
+  }
+
+  const upcomingCount =
+    document.getElementById(
+      'upcomingCount'
+    );
+
+  if (upcomingCount) {
+    upcomingCount.textContent =
+      upcoming;
+  }
+
+  const completedCount =
+    document.getElementById(
+      'completedCount'
+    );
+
+  if (completedCount) {
+    completedCount.textContent =
+      completed;
+  }
+
+  const studentCount =
+    document.getElementById(
+      'studentCount'
+    );
+
+  if (studentCount) {
+    studentCount.textContent =
+      students;
+  }
+
+  const box =
+    document.getElementById(
+      'examList'
+    );
+
+  if (!box) return;
+
+  if (!db.exams.length) {
+
+    box.innerHTML =
+      `
+        <div class="empty">
+          No examinations yet.
+          Create your first exam room.
+        </div>
+      `;
+
+    return;
+  }
+
+  box.innerHTML =
+    db.exams
+      .map(ex => {
+
+        const status =
+          formatStatus(ex);
+
+        return `
+
+          <div class="exam-row">
+
+            <div>
+
+              <b>
+                ${esc(ex.title)}
+              </b>
+
+              <div class="exam-meta">
+                ${esc(ex.subject)}
+                • ${esc(ex.date)}
+                ${esc(ex.startTime)}
+                • Room ${esc(ex.roomCode)}
+              </div>
+
+            </div>
+
+            <span
+              class="badge ${status}"
+            >
+              ${status}
+            </span>
+
+            <div class="room-secret">
+
+              <span class="exam-meta">
+                Password
+              </span>
+
+              <span class="secret-value">
+                ${esc(ex.roomPassword)}
+              </span>
+
+            </div>
+
+            <span>
+              ${
+                ex.questionIds?.length ||
+                0
+              }
+              questions
+            </span>
+
+            <div class="room-actions">
+
+              <button
+                class="text-btn"
+                onclick="
+                  copyRoomCode(
+                    '${esc(ex.roomCode)}',
+                    this
+                  )
+                "
+              >
+                Copy code
+              </button>
+
+              <button
+                class="text-btn"
+                onclick="
+                  viewRoom('${ex.id}')
+                "
+              >
+                View
+              </button>
+
+            </div>
+
+          </div>
+
+        `;
+
+      })
+      .join('');
+}
+
+
+/* =========================================================
+   VIEW ROOM
    ========================================================= */
 
 function viewRoom(id) {
+
   const db = getDB();
 
-  const ex = db.exams.find(
-    x => x.id === id
-  );
+  const ex =
+    db.exams.find(
+      x => x.id === id
+    );
 
   if (!ex) return;
 
@@ -509,14 +953,22 @@ function viewRoom(id) {
     );
 
   const qCount =
-    ex.questionIds?.length || 0;
+    ex.questionIds?.length ||
+    0;
 
-  const m =
-    document.getElementById('questionModal');
+  const modal =
+    document.getElementById(
+      'questionModal'
+    );
 
-  m.classList.remove('hidden');
+  if (!modal) return;
 
-  m.innerHTML = `
+  modal.classList.remove(
+    'hidden'
+  );
+
+  modal.innerHTML = `
+
     <div class="modal-box">
 
       <button
@@ -551,7 +1003,12 @@ function viewRoom(id) {
         <button
           class="btn btn-primary"
           style="margin-top:10px"
-          onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
+          onclick="
+            copyRoomCode(
+              '${esc(ex.roomCode)}',
+              this
+            )
+          "
         >
           Copy Room Code
         </button>
@@ -571,7 +1028,8 @@ function viewRoom(id) {
         </strong>
 
         <div class="security-note">
-          Display only — password copy is disabled.
+          Display only.
+          Password copy is disabled.
         </div>
 
       </div>
@@ -581,15 +1039,22 @@ function viewRoom(id) {
         <b>${attempts.length}</b>
         student attempt(s)
 
-        • 
+        •
 
         <b>${qCount}</b>
         question(s)
 
-        • 
+        •
 
         ${esc(ex.duration)}
         minutes
+
+        <br>
+
+        Status:
+        <b>
+          ${formatStatus(ex)}
+        </b>
 
       </div>
 
@@ -612,7 +1077,9 @@ function viewRoom(id) {
         <button
           class="btn btn-danger"
           style="flex:1"
-          onclick="deleteExam('${ex.id}')"
+          onclick="
+            deleteExam('${ex.id}')
+          "
         >
           Delete Exam
         </button>
@@ -629,11 +1096,13 @@ function viewRoom(id) {
    ========================================================= */
 
 function deleteExam(id) {
+
   const db = getDB();
 
-  const ex = db.exams.find(
-    x => x.id === id
-  );
+  const ex =
+    db.exams.find(
+      x => x.id === id
+    );
 
   if (!ex) return;
 
@@ -643,52 +1112,43 @@ function deleteExam(id) {
     ).length;
 
   const questionCount =
-    ex.questionIds?.length || 0;
+    ex.questionIds?.length ||
+    0;
 
-  let message =
-    `Delete the examination "${ex.title}"?\n\n`;
-
-  message +=
-    `Room: ${ex.roomCode}\n`;
-
-  message +=
-    `Questions: ${questionCount}\n`;
-
-  message +=
-    `Student attempts: ${attempts}\n\n`;
-
-  message +=
-    `This will permanently delete the exam room.`;
+  const message =
+    `Delete the examination "${ex.title}"?\n\n` +
+    `Room: ${ex.roomCode}\n` +
+    `Questions: ${questionCount}\n` +
+    `Student attempts: ${attempts}\n\n` +
+    `This will permanently delete the exam room and its questions/submissions.`;
 
   if (!confirm(message)) {
     return;
   }
 
-  /*
-   * Remove the examination
-   */
-  db.exams = db.exams.filter(
-    e => e.id !== id
-  );
-
-  /*
-   * Remove questions belonging to
-   * this examination
-   */
   const deletedQuestionIds =
-    new Set(ex.questionIds || []);
+    new Set(
+      ex.questionIds || []
+    );
 
-  db.questions = db.questions.filter(
-    q => !deletedQuestionIds.has(q.id)
-  );
+  db.exams =
+    db.exams.filter(
+      e => e.id !== id
+    );
 
-  /*
-   * Remove student submissions
-   * belonging to this examination
-   */
-  db.attempts = db.attempts.filter(
-    a => a.examId !== id
-  );
+  db.questions =
+    db.questions.filter(
+      q =>
+        !deletedQuestionIds.has(
+          q.id
+        )
+    );
+
+  db.attempts =
+    db.attempts.filter(
+      a =>
+        a.examId !== id
+    );
 
   saveDB(db);
 
@@ -706,16 +1166,26 @@ function deleteExam(id) {
 }
 
 
+/* =========================================================
+   QUESTION MODAL
+   ========================================================= */
+
 function openQuestionModal() {
+
   const db = getDB();
 
-  document
-    .getElementById('questionModal')
-    .classList.remove('hidden');
+  const modal =
+    document.getElementById(
+      'questionModal'
+    );
 
-  document.getElementById(
-    'questionModal'
-  ).innerHTML = `
+  if (!modal) return;
+
+  modal.classList.remove(
+    'hidden'
+  );
+
+  modal.innerHTML = `
 
     <div class="modal-box">
 
@@ -726,11 +1196,14 @@ function openQuestionModal() {
         ×
       </button>
 
-      <h2>Add question</h2>
+      <h2>
+        Add question
+      </h2>
 
       <form id="questionForm">
 
         <label>
+
           Question type
 
           <select id="qType">
@@ -756,29 +1229,41 @@ function openQuestionModal() {
             </option>
 
           </select>
+
         </label>
 
         <label>
+
           Add to examination
 
           <select id="qExam">
 
             ${
               db.exams.length
+
                 ? db.exams
                     .map(
-                      e => `
-                        <option value="${e.id}">
-                          ${esc(e.title)}
-                          — Room ${esc(e.roomCode)}
+                      ex => `
+
+                        <option
+                          value="${esc(ex.id)}"
+                        >
+                          ${esc(ex.title)}
+                          —
+                          Room
+                          ${esc(ex.roomCode)}
                         </option>
+
                       `
                     )
                     .join('')
+
                 : `
+
                   <option value="">
                     Create an examination first
                   </option>
+
                 `
             }
 
@@ -824,7 +1309,9 @@ function openQuestionModal() {
               id="qMarks"
               type="number"
               min="0"
+              step="0.01"
               value="1"
+              required
             >
 
           </label>
@@ -847,7 +1334,11 @@ function openQuestionModal() {
 
         <button
           class="btn btn-primary full"
-          ${db.exams.length ? '' : 'disabled'}
+          ${
+            db.exams.length
+              ? ''
+              : 'disabled'
+          }
         >
           Save Question
         </button>
@@ -857,95 +1348,105 @@ function openQuestionModal() {
     </div>
   `;
 
-  document
-    .getElementById('qType')
-    .addEventListener(
+  const type =
+    document.getElementById(
+      'qType'
+    );
+
+  if (type) {
+
+    type.addEventListener(
       'change',
       updateQuestionFields
     );
 
-  document
-    .getElementById('questionForm')
-    .addEventListener(
+  }
+
+  const form =
+    document.getElementById(
+      'questionForm'
+    );
+
+  if (form) {
+
+    form.addEventListener(
       'submit',
       saveQuestion
     );
+
+  }
 
   updateQuestionFields();
 }
 
 function closeQuestionModal() {
-  const modal =
-    document.getElementById('questionModal');
 
-  modal.classList.add('hidden');
+  const modal =
+    document.getElementById(
+      'questionModal'
+    );
+
+  if (!modal) return;
+
+  modal.classList.add(
+    'hidden'
+  );
 
   modal.innerHTML = '';
 }
 
+
+/* =========================================================
+   QUESTION TYPE FIELDS
+   ========================================================= */
+
 function updateQuestionFields() {
+
   const type =
-    document.getElementById('qType')?.value;
+    document.getElementById(
+      'qType'
+    )?.value;
 
   if (!type) return;
 
-  const opt =
-    document.getElementById('qOptions');
+  const options =
+    document.getElementById(
+      'qOptions'
+    );
 
-  const wrap =
-    document.getElementById('correctWrap');
+  const correctWrap =
+    document.getElementById(
+      'correctWrap'
+    );
 
-  if (!opt || !wrap) return;
+  if (!options || !correctWrap) {
+    return;
+  }
 
   if (type === 'mcq') {
 
-    opt.innerHTML =
+    options.innerHTML =
       ['A', 'B', 'C', 'D']
         .map(
-          x => `
+          letter => `
+
             <label>
-              Option ${x}
+
+              Option ${letter}
 
               <input
-                id="${x.toLowerCase()}"
+                id="${letter.toLowerCase()}"
                 required
               >
+
             </label>
+
           `
         )
         .join('');
 
-    wrap.innerHTML = `
-      <span class="field-title">
-        Correct answer
-      </span>
+    correctWrap.innerHTML = `
 
-      <input
-        id="correct"
-        required
-        placeholder="For MCQ use A, B, C or D"
-      >
-    `;
-
-  } else if (type === 'truefalse') {
-
-    opt.innerHTML = `
-      <div
-        class="notice type-help"
-        style="grid-column:1/-1"
-      >
-        <b>
-          True / False question
-        </b>
-
-        <br>
-
-        Students will see only True and False.
-        No A/B/C/D options are needed.
-      </div>
-    `;
-
-    wrap.innerHTML = `
       <span class="field-title">
         Correct answer
       </span>
@@ -954,6 +1455,68 @@ function updateQuestionFields() {
         id="correct"
         required
       >
+
+        <option value="">
+          Select correct option
+        </option>
+
+        <option value="A">
+          A
+        </option>
+
+        <option value="B">
+          B
+        </option>
+
+        <option value="C">
+          C
+        </option>
+
+        <option value="D">
+          D
+        </option>
+
+      </select>
+
+    `;
+
+  }
+
+  else if (
+    type === 'truefalse'
+  ) {
+
+    options.innerHTML = `
+
+      <div
+        class="notice type-help"
+        style="grid-column:1/-1"
+      >
+
+        <b>
+          True / False question
+        </b>
+
+        <br>
+
+        Students will see only
+        True and False.
+
+      </div>
+
+    `;
+
+    correctWrap.innerHTML = `
+
+      <span class="field-title">
+        Correct answer
+      </span>
+
+      <select
+        id="correct"
+        required
+      >
+
         <option value="True">
           True
         </option>
@@ -961,16 +1524,24 @@ function updateQuestionFields() {
         <option value="False">
           False
         </option>
+
       </select>
+
     `;
 
-  } else if (type === 'numerical') {
+  }
 
-    opt.innerHTML = `
+  else if (
+    type === 'numerical'
+  ) {
+
+    options.innerHTML = `
+
       <div
         class="notice type-help"
         style="grid-column:1/-1"
       >
+
         <b>
           Numerical question
         </b>
@@ -978,12 +1549,15 @@ function updateQuestionFields() {
         <br>
 
         Students will enter a number.
-        The system compares the answer
-        with the expected value.
+        The system compares it with
+        the expected value.
+
       </div>
+
     `;
 
-    wrap.innerHTML = `
+    correctWrap.innerHTML = `
+
       <span class="field-title">
         Expected numerical answer
       </span>
@@ -995,11 +1569,15 @@ function updateQuestionFields() {
         required
         placeholder="Example: 9.81"
       >
+
     `;
 
-  } else {
+  }
 
-    opt.innerHTML = `
+  else {
+
+    options.innerHTML = `
+
       <div
         class="notice type-help"
         style="grid-column:1/-1"
@@ -1015,14 +1593,18 @@ function updateQuestionFields() {
 
         <br>
 
-        The student writes their own response.
-        The teacher will check the answer manually
-        and award marks.
+        The student writes their own
+        response.
+
+        The teacher will check the
+        answer manually.
 
       </div>
+
     `;
 
-    wrap.innerHTML = `
+    correctWrap.innerHTML = `
+
       <span class="field-title">
 
         ${
@@ -1042,22 +1624,35 @@ function updateQuestionFields() {
             : 'Optional marking rubric or key points'
         }"
       ></textarea>
+
     `;
+
   }
 }
 
+
+/* =========================================================
+   SAVE QUESTION
+   ========================================================= */
+
 function saveQuestion(e) {
+
   e.preventDefault();
 
   const db = getDB();
 
   const type =
-    document.getElementById('qType').value;
+    document.getElementById(
+      'qType'
+    ).value;
 
   const examId =
-    document.getElementById('qExam')?.value;
+    document.getElementById(
+      'qExam'
+    )?.value;
 
   if (!examId) {
+
     alert(
       'Create an examination room first.'
     );
@@ -1065,41 +1660,135 @@ function saveQuestion(e) {
     return;
   }
 
+  const questionText =
+    document
+      .getElementById('qText')
+      .value
+      .trim();
+
+  if (!questionText) {
+
+    alert(
+      'Please enter the question.'
+    );
+
+    return;
+  }
+
+  const marks =
+    Number(
+      document.getElementById(
+        'qMarks'
+      ).value
+    );
+
+  const negativeMarks =
+    Number(
+      document.getElementById(
+        'qNegative'
+      ).value
+    ) || 0;
+
+  if (
+    !Number.isFinite(marks) ||
+    marks <= 0
+  ) {
+
+    alert(
+      'Marks must be greater than 0.'
+    );
+
+    return;
+  }
+
+  const correctElement =
+    document.getElementById(
+      'correct'
+    );
+
+  const correct =
+    correctElement?.value
+      ?.trim() || '';
+
+  if (
+    type === 'mcq' &&
+    !correct
+  ) {
+
+    alert(
+      'Please select the correct MCQ option.'
+    );
+
+    return;
+  }
+
+  if (
+    type === 'truefalse' &&
+    !correct
+  ) {
+
+    alert(
+      'Please select True or False.'
+    );
+
+    return;
+  }
+
+  if (
+    type === 'numerical' &&
+    !correct
+  ) {
+
+    alert(
+      'Please enter the expected numerical answer.'
+    );
+
+    return;
+  }
+
   const q = {
+
     id: uid('q'),
 
     type,
 
-    text:
-      document
-        .getElementById('qText')
-        .value
-        .trim(),
+    text: questionText,
 
-    marks:
-      +document.getElementById('qMarks').value,
+    marks,
 
-    negativeMarks:
-      +document.getElementById('qNegative').value,
+    negativeMarks,
 
-    correct:
-      document
-        .getElementById('correct')
-        .value
-        .trim(),
+    correct,
 
     options:
       type === 'mcq'
         ? {
-            A: document.getElementById('a').value,
-            B: document.getElementById('b').value,
-            C: document.getElementById('c').value,
-            D: document.getElementById('d').value
+            A:
+              document.getElementById(
+                'a'
+              ).value.trim(),
+
+            B:
+              document.getElementById(
+                'b'
+              ).value.trim(),
+
+            C:
+              document.getElementById(
+                'c'
+              ).value.trim(),
+
+            D:
+              document.getElementById(
+                'd'
+              ).value.trim()
           }
         : null,
 
     manual:
-      ['short', 'long'].includes(type)
+      ['short', 'long']
+        .includes(type)
+
   };
 
   db.questions.unshift(q);
@@ -1109,19 +1798,25 @@ function saveQuestion(e) {
       x => x.id === examId
     );
 
-  if (
-    ex &&
-    !ex.questionIds.includes(q.id)
-  ) {
-    ex.questionIds.push(q.id);
+  if (!ex) {
+
+    alert(
+      'Selected examination was not found.'
+    );
+
+    return;
   }
+
+  ex.questionIds ||= [];
+
+  ex.questionIds.push(
+    q.id
+  );
 
   saveDB(db);
 
   logEvent(
-    `Added ${type.toUpperCase()} question to “${
-      ex?.title || 'exam'
-    }”`
+    `Added ${type.toUpperCase()} question to "${ex.title}"`
   );
 
   closeQuestionModal();
@@ -1129,7 +1824,13 @@ function saveQuestion(e) {
   renderQuestionBank();
 }
 
+
+/* =========================================================
+   QUESTION BANK
+   ========================================================= */
+
 function renderQuestionBank() {
+
   const db = getDB();
 
   const box =
@@ -1137,20 +1838,38 @@ function renderQuestionBank() {
       'questionBank'
     );
 
+  if (!box) return;
+
   if (!db.questions.length) {
 
-    box.innerHTML =
-      '<div class="empty">No questions yet. Add MCQ, True/False, Short Answer, Long Answer or Numerical questions.</div>';
+    box.innerHTML = `
+      <div class="empty">
+        No questions yet.
+        Add MCQ, True/False, Short Answer,
+        Long Answer or Numerical questions.
+      </div>
+    `;
 
     return;
   }
 
   box.innerHTML = `
+
     <div class="question-list">
 
       ${db.questions
-        .map(
-          q => `
+        .map(q => {
+
+          const exam =
+            db.exams.find(
+              e =>
+                e.questionIds?.includes(
+                  q.id
+                )
+            );
+
+          return `
+
             <div class="question-item">
 
               <div>
@@ -1161,12 +1880,25 @@ function renderQuestionBank() {
 
                 <div class="q-meta">
 
-                  ${q.type.toUpperCase()}
-                  • ${q.marks} mark(s)
-                  • ${
+                  ${esc(
+                    q.type.toUpperCase()
+                  )}
+
+                  •
+                  ${q.marks}
+                  mark(s)
+
+                  •
+                  ${
                     q.manual
                       ? 'Manual teacher checking'
                       : 'Automatic marking'
+                  }
+
+                  ${
+                    exam
+                      ? ` • ${esc(exam.title)}`
+                      : ''
                   }
 
                 </div>
@@ -1188,15 +1920,24 @@ function renderQuestionBank() {
               </span>
 
             </div>
-          `
-        )
+
+          `;
+
+        })
         .join('')}
 
     </div>
+
   `;
 }
 
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+
 function renderResults() {
+
   const db = getDB();
 
   const box =
@@ -1204,10 +1945,17 @@ function renderResults() {
       'resultsTable'
     );
 
+  if (!box) return;
+
   if (!db.attempts.length) {
 
-    box.innerHTML =
-      '<div class="empty">No student submissions yet. Submitted answer copies will appear here for teacher checking.</div>';
+    box.innerHTML = `
+      <div class="empty">
+        No student submissions yet.
+        Submitted answer copies will appear
+        here for teacher checking.
+      </div>
+    `;
 
     return;
   }
@@ -1216,13 +1964,32 @@ function renderResults() {
 
     <div
       class="result-row"
-      style="font-weight:800;color:#667085"
+      style="
+        font-weight:800;
+        color:#667085
+      "
     >
-      <span>Student</span>
-      <span>Exam</span>
-      <span>Score</span>
-      <span>Status</span>
-      <span>Action</span>
+
+      <span>
+        Student
+      </span>
+
+      <span>
+        Exam
+      </span>
+
+      <span>
+        Score
+      </span>
+
+      <span>
+        Status
+      </span>
+
+      <span>
+        Action
+      </span>
+
     </div>
 
     ${db.attempts
@@ -1230,13 +1997,17 @@ function renderResults() {
 
         const ex =
           db.exams.find(
-            e => e.id === a.examId
+            e =>
+              e.id ===
+              a.examId
           );
 
         const pending =
-          a.gradingStatus === 'pending';
+          a.gradingStatus ===
+          'pending';
 
         return `
+
           <div class="result-row">
 
             <div>
@@ -1252,14 +2023,26 @@ function renderResults() {
             </div>
 
             <span>
-              ${esc(ex?.title || '—')}
+              ${esc(
+                ex?.title || '—'
+              )}
             </span>
 
             <span>
+
               <b>
-                ${a.score ?? '—'}
+                ${
+                  Number.isFinite(
+                    Number(a.score)
+                  )
+                    ? a.score
+                    : '—'
+                }
               </b>
-              / ${a.total}
+
+              /
+              ${a.total}
+
             </span>
 
             <span
@@ -1269,48 +2052,67 @@ function renderResults() {
                   : 'published'
               }"
             >
+
               ${
                 pending
                   ? 'Needs checking'
                   : 'Checked'
               }
+
             </span>
 
             <button
               class="text-btn"
-              onclick="openGrading('${a.id}')"
+              onclick="
+                openGrading('${a.id}')
+              "
             >
+
               ${
                 pending
                   ? 'Check answers'
                   : 'Review'
               }
+
             </button>
 
           </div>
+
         `;
+
       })
       .join('')}
 
   `;
 }
 
-function openGrading(attemptId) {
+
+/* =========================================================
+   OPEN GRADING
+   ========================================================= */
+
+function openGrading(
+  attemptId
+) {
+
   const db = getDB();
 
-  const a =
+  const attempt =
     db.attempts.find(
-      x => x.id === attemptId
+      x =>
+        x.id === attemptId
     );
 
-  if (!a) return;
+  if (!attempt) return;
 
-  const ex =
+  const exam =
     db.exams.find(
-      x => x.id === a.examId
+      x =>
+        x.id ===
+        attempt.examId
     );
 
-  if (!ex) return;
+  if (!exam) return;
 
   showView('results');
 
@@ -1319,17 +2121,23 @@ function openGrading(attemptId) {
       'resultsTable'
     );
 
+  if (!box) return;
+
   const manualCount =
-    a.answers.filter(x => {
+    attempt.answers.filter(
+      answer => {
 
-      const q =
-        db.questions.find(
-          q => q.id === x.questionId
-        );
+        const q =
+          db.questions.find(
+            question =>
+              question.id ===
+              answer.questionId
+          );
 
-      return q?.manual;
+        return q?.manual;
 
-    }).length;
+      }
+    ).length;
 
   box.innerHTML = `
 
@@ -1344,27 +2152,42 @@ function openGrading(attemptId) {
         </div>
 
         ${db.attempts
-          .map(
-            x => `
+          .map(x => {
+
+            const xExam =
+              db.exams.find(
+                e =>
+                  e.id ===
+                  x.examId
+              );
+
+            return `
+
               <div
-                class="attempt-card ${
-                  x.id === attemptId
-                    ? 'selected'
-                    : ''
-                }"
-                onclick="openGrading('${x.id}')"
+                class="
+                  attempt-card
+                  ${
+                    x.id ===
+                    attemptId
+                      ? 'selected'
+                      : ''
+                  }
+                "
+                onclick="
+                  openGrading('${x.id}')
+                "
               >
 
                 <b>
-                  ${esc(x.studentName)}
+                  ${esc(
+                    x.studentName
+                  )}
                 </b>
 
                 <span>
                   ${esc(
-                    db.exams.find(
-                      e =>
-                        e.id === x.examId
-                    )?.title || ''
+                    xExam?.title ||
+                    ''
                   )}
                 </span>
 
@@ -1378,8 +2201,10 @@ function openGrading(attemptId) {
                 </span>
 
               </div>
-            `
-          )
+
+            `;
+
+          })
           .join('')}
 
       </div>
@@ -1395,48 +2220,58 @@ function openGrading(attemptId) {
             </div>
 
             <h2>
-              ${esc(a.studentName)}
+              ${esc(
+                attempt.studentName
+              )}
               —
-              ${esc(ex.title)}
+              ${esc(exam.title)}
             </h2>
 
             <div class="exam-meta">
+
               Submitted
-              ${esc(a.submittedAt)}
+              ${esc(
+                attempt.submittedAt
+              )}
+
               •
+
               ${manualCount}
               subjective question(s)
+
             </div>
 
           </div>
 
           <span
             class="badge ${
-              a.gradingStatus ===
+              attempt.gradingStatus ===
               'pending'
                 ? 'review'
                 : 'published'
             }"
           >
+
             ${
-              a.gradingStatus ===
+              attempt.gradingStatus ===
               'pending'
                 ? 'Manual review required'
                 : 'Checked'
             }
+
           </span>
 
         </div>
 
         <div id="gradingQuestions">
 
-          ${a.answers
+          ${attempt.answers
             .map(
-              (ans, i) =>
+              (answer, index) =>
                 renderAnswerReview(
-                  ans,
-                  i,
-                  a,
+                  answer,
+                  index,
+                  attempt,
                   db
                 )
             )
@@ -1455,14 +2290,18 @@ function openGrading(attemptId) {
 
           <button
             class="btn btn-secondary"
-            onclick="renderResults()"
+            onclick="
+              renderResults()
+            "
           >
             Back to results
           </button>
 
           <button
             class="btn btn-primary"
-            onclick="saveGrading('${a.id}')"
+            onclick="
+              saveGrading('${attempt.id}')
+            "
           >
             Save Checked Result
           </button>
@@ -1472,38 +2311,64 @@ function openGrading(attemptId) {
       </div>
 
     </div>
+
   `;
 }
 
+
+/* =========================================================
+   ANSWER REVIEW
+   ========================================================= */
+
 function renderAnswerReview(
-  ans,
-  i,
-  a,
+  answer,
+  index,
+  attempt,
   db
 ) {
+
   const q =
     db.questions.find(
-      x => x.id === ans.questionId
+      x =>
+        x.id ===
+        answer.questionId
     );
 
   if (!q) return '';
 
-  const auto = !q.manual;
+  const automatic =
+    !q.manual;
 
-  const status = auto
-    ? ans.isCorrect
-      ? 'Correct'
-      : 'Incorrect'
-    : ans.reviewed
-      ? 'Checked'
-      : 'Teacher checking required';
+  let status;
+
+  if (automatic) {
+
+    status =
+      answer.isCorrect
+        ? 'Correct'
+        : 'Incorrect';
+
+  } else {
+
+    status =
+      answer.reviewed
+        ? 'Checked'
+        : 'Teacher checking required';
+
+  }
 
   return `
+
     <div
-      class="answer-review ${
-        auto ? 'auto' : 'manual'
-      }"
-      data-qid="${q.id}"
+      class="
+        answer-review
+        ${
+          automatic
+            ? 'auto'
+            : 'manual'
+        }
+      "
+      data-qid="${esc(q.id)}"
     >
 
       <div
@@ -1518,24 +2383,29 @@ function renderAnswerReview(
 
           <span class="review-label">
 
-            Question ${i + 1}
-            • ${q.type.toUpperCase()}
-            • ${q.marks}
+            Question
+            ${index + 1}
+
+            •
+            ${esc(
+              q.type.toUpperCase()
+            )}
+
+            •
+            ${q.marks}
             mark${q.marks == 1 ? '' : 's'}
 
           </span>
 
           <h3 style="margin:6px 0">
-
             ${esc(q.text)}
-
           </h3>
 
         </div>
 
         <span
           class="badge ${
-            auto
+            automatic
               ? 'published'
               : 'review'
           }"
@@ -1553,41 +2423,56 @@ function renderAnswerReview(
 
         <br>
 
-        ${esc(ans.value || 'No answer')}
+        ${esc(
+          answer.value ||
+          'No answer'
+        )}
 
       </div>
 
       ${
-        auto
+        automatic
+
           ? `
+
             <div class="grading-summary">
 
               <span>
                 Given marks:
-                <b>${q.marks}</b>
+                <b>
+                  ${q.marks}
+                </b>
               </span>
 
               <span>
                 Expected answer:
-                <b>${esc(q.correct)}</b>
+                <b>
+                  ${esc(q.correct)}
+                </b>
               </span>
 
               <span>
                 Auto score:
                 <b>
-                  ${ans.awarded}
+                  ${answer.awarded}
                 </b>
-                / ${q.marks}
+                /
+                ${q.marks}
               </span>
 
             </div>
+
           `
+
           : `
+
             <div class="grading-summary">
 
               <span>
                 Given marks:
-                <b>${q.marks}</b>
+                <b>
+                  ${q.marks}
+                </b>
               </span>
 
               <span>
@@ -1613,12 +2498,15 @@ function renderAnswerReview(
 
                 <input
                   class="manual-mark"
-                  data-qid="${q.id}"
+                  data-qid="${esc(q.id)}"
                   type="number"
                   min="0"
                   max="${q.marks}"
                   step="0.01"
-                  value="${ans.awarded ?? 0}"
+                  value="${
+                    answer.awarded ??
+                    0
+                  }"
                 >
 
               </label>
@@ -1629,89 +2517,132 @@ function renderAnswerReview(
 
                 <textarea
                   class="manual-feedback"
-                  data-qid="${q.id}"
+                  data-qid="${esc(q.id)}"
                   rows="2"
                   placeholder="Optional feedback"
-                >${esc(ans.feedback || '')}</textarea>
+                >${esc(
+                  answer.feedback ||
+                  ''
+                )}</textarea>
 
               </label>
 
             </div>
+
           `
       }
 
     </div>
+
   `;
 }
 
-function saveGrading(attemptId) {
+
+/* =========================================================
+   SAVE GRADING
+   ========================================================= */
+
+function saveGrading(
+  attemptId
+) {
+
   const db = getDB();
 
-  const a =
+  const attempt =
     db.attempts.find(
-      x => x.id === attemptId
+      x =>
+        x.id === attemptId
     );
 
-  if (!a) return;
+  if (!attempt) return;
 
   document
-    .querySelectorAll('.manual-mark')
+    .querySelectorAll(
+      '.manual-mark'
+    )
     .forEach(input => {
 
-      const ans =
-        a.answers.find(
+      const answer =
+        attempt.answers.find(
           x =>
             x.questionId ===
             input.dataset.qid
         );
 
-      if (ans) {
+      if (!answer) return;
 
-        ans.awarded =
-          Math.max(
-            0,
-            Math.min(
-              Number(input.max),
-              Number(input.value) || 0
-            )
-          );
+      const max =
+        Number(input.max);
 
-        ans.reviewed = true;
+      let value =
+        Number(input.value);
 
-        const fb =
-          document.querySelector(
-            `.manual-feedback[data-qid="${input.dataset.qid}"]`
-          );
-
-        ans.feedback =
-          fb?.value || '';
+      if (
+        !Number.isFinite(value)
+      ) {
+        value = 0;
       }
+
+      value =
+        Math.max(
+          0,
+          Math.min(
+            max,
+            value
+          )
+        );
+
+      answer.awarded =
+        value;
+
+      answer.reviewed =
+        true;
+
+      const feedback =
+        document.querySelector(
+          `.manual-feedback[data-qid="${input.dataset.qid}"]`
+        );
+
+      answer.feedback =
+        feedback?.value ||
+        '';
+
     });
 
-  a.score =
-    a.answers.reduce(
-      (s, x) =>
-        s +
-        (Number(x.awarded) || 0),
+  attempt.score =
+    attempt.answers.reduce(
+      (sum, answer) =>
+        sum +
+        (
+          Number(
+            answer.awarded
+          ) || 0
+        ),
       0
     );
 
-  a.gradingStatus =
+  attempt.gradingStatus =
     'checked';
 
-  a.checkedAt =
+  attempt.checkedAt =
     new Date().toLocaleString();
 
   saveDB(db);
 
   logEvent(
-    `Checked result for ${a.studentName}`
+    `Checked result for ${attempt.studentName}`
   );
 
   renderResults();
 }
 
+
+/* =========================================================
+   AUDIT
+   ========================================================= */
+
 function renderAudit() {
+
   const db = getDB();
 
   const box =
@@ -1719,47 +2650,79 @@ function renderAudit() {
       'auditList'
     );
 
-  box.innerHTML = db.logs.length
-    ? db.logs
-        .map(
-          x => `
-            <div class="audit-row">
+  if (!box) return;
 
-              <b>
-                ${esc(x.text)}
-              </b>
+  box.innerHTML =
+    db.logs.length
 
-              <span class="exam-meta">
-                ${esc(x.time)}
-              </span>
+      ? db.logs
+          .map(
+            item => `
 
-            </div>
-          `
-        )
-        .join('')
-    : '<div class="empty">No activity recorded.</div>';
+              <div class="audit-row">
+
+                <b>
+                  ${esc(item.text)}
+                </b>
+
+                <span class="exam-meta">
+                  ${esc(item.time)}
+                </span>
+
+              </div>
+
+            `
+          )
+          .join('')
+
+      : `
+          <div class="empty">
+            No activity recorded.
+          </div>
+        `;
 }
 
+
+/* =========================================================
+   STUDENT INITIALIZATION
+   ========================================================= */
+
 function initStudent() {
+
   setupNav();
 
-  document
-    .getElementById('joinForm')
-    .addEventListener(
+  const joinForm =
+    document.getElementById(
+      'joinForm'
+    );
+
+  if (joinForm) {
+
+    joinForm.addEventListener(
       'submit',
       joinExam
     );
 
+  }
+
   renderStudentDashboard();
 
   if (location.hash) {
+
     showView(
       location.hash.slice(1)
     );
+
   }
 }
 
+
+/* =========================================================
+   STUDENT DASHBOARD
+   ========================================================= */
+
 function renderStudentDashboard() {
+
   const db = getDB();
 
   const box =
@@ -1767,70 +2730,111 @@ function renderStudentDashboard() {
       'studentExamList'
     );
 
-  const up =
-    db.exams.filter(
-      e =>
-        formatStatus(e) !==
-        'completed'
-    );
+  if (box) {
 
-  box.innerHTML = up.length
-    ? up
-        .map(
-          e => `
-            <div class="exam-row">
+    const available =
+      db.exams.filter(
+        exam =>
+          formatStatus(exam) !==
+          'completed'
+      );
 
-              <div>
+    box.innerHTML =
+      available.length
 
-                <b>
-                  ${esc(e.title)}
-                </b>
+        ? available
+            .map(exam => {
 
-                <div class="exam-meta">
+              const status =
+                formatStatus(exam);
 
-                  ${esc(e.subject)}
-                  • ${esc(e.date)}
-                  ${esc(e.startTime)}
+              return `
+
+                <div class="exam-row">
+
+                  <div>
+
+                    <b>
+                      ${esc(
+                        exam.title
+                      )}
+                    </b>
+
+                    <div class="exam-meta">
+
+                      ${esc(
+                        exam.subject
+                      )}
+
+                      •
+                      ${esc(exam.date)}
+
+                      ${esc(
+                        exam.startTime
+                      )}
+
+                    </div>
+
+                  </div>
+
+                  <span
+                    class="badge ${status}"
+                  >
+                    ${status}
+                  </span>
+
+                  <span>
+                    ${exam.duration}
+                    min
+                  </span>
+
+                  <span>
+                    ${
+                      exam.questionIds
+                        ?.length || 0
+                    }
+                    questions
+                  </span>
+
+                  <button
+                    class="text-btn"
+                    onclick="
+                      document.getElementById(
+                        'roomCode'
+                      ).value =
+                        '${esc(exam.roomCode)}';
+
+                      showView('join');
+                    "
+                  >
+                    Join
+                  </button>
 
                 </div>
 
-              </div>
+              `;
 
-              <span
-                class="badge ${formatStatus(e)}"
-              >
-                ${formatStatus(e)}
-              </span>
+            })
+            .join('')
 
-              <span>
-                ${e.duration} min
-              </span>
+        : `
 
-              <span>
-                ${e.questionIds.length}
-                questions
-              </span>
+          <div class="empty">
+            No available examinations.
+            Ask your examiner for the room
+            code and password.
+          </div>
 
-              <button
-                class="text-btn"
-                onclick="
-                  document.getElementById('roomCode').value='${esc(e.roomCode)}';
-                  showView('join')
-                "
-              >
-                Join
-              </button>
+        `;
 
-            </div>
-          `
-        )
-        .join('')
-    : '<div class="empty">No available examinations. Ask your examiner for the room code and password.</div>';
+  }
 
-  const r =
+  const results =
     document.getElementById(
       'studentResults'
     );
+
+  if (!results) return;
 
   const attempts =
     db.attempts.filter(
@@ -1839,110 +2843,189 @@ function renderStudentDashboard() {
         'student@example.com'
     );
 
-  r.innerHTML = attempts.length
-    ? attempts
-        .map(
-          a => `
-            <div class="exam-row">
+  results.innerHTML =
+    attempts.length
 
-              <div>
+      ? attempts
+          .map(attempt => {
 
-                <b>
-                  ${esc(
-                    db.exams.find(
-                      e =>
-                        e.id ===
-                        a.examId
-                    )?.title ||
-                    'Exam'
-                  )}
-                </b>
+            const exam =
+              db.exams.find(
+                e =>
+                  e.id ===
+                  attempt.examId
+              );
 
-                <div class="exam-meta">
-                  ${esc(
-                    a.submittedAt
-                  )}
+            const checked =
+              attempt.gradingStatus ===
+              'checked';
+
+            return `
+
+              <div class="exam-row">
+
+                <div>
+
+                  <b>
+                    ${esc(
+                      exam?.title ||
+                      'Exam'
+                    )}
+                  </b>
+
+                  <div class="exam-meta">
+                    ${esc(
+                      attempt.submittedAt
+                    )}
+                  </div>
+
                 </div>
+
+                <span>
+                  ${
+                    checked
+                      ? `${attempt.score}/${attempt.total}`
+                      : 'Under review'
+                  }
+                </span>
+
+                <span
+                  class="badge ${
+                    checked
+                      ? 'published'
+                      : 'review'
+                  }"
+                >
+                  ${
+                    checked
+                      ? 'Checked'
+                      : 'Under review'
+                  }
+                </span>
 
               </div>
 
-              <span>
-                ${a.score}/${a.total}
-              </span>
+            `;
 
-              <span
-                class="badge ${
-                  a.gradingStatus ===
-                  'checked'
-                    ? 'published'
-                    : 'review'
-                }"
-              >
-                ${
-                  a.gradingStatus ===
-                  'checked'
-                    ? 'Checked'
-                    : 'Under review'
-                }
-              </span>
+          })
+          .join('')
 
-            </div>
-          `
-        )
-        .join('')
-    : '<div class="empty">No results yet.</div>';
+      : `
+
+          <div class="empty">
+            No results yet.
+          </div>
+
+        `;
 }
 
+
+/* =========================================================
+   JOIN EXAM
+   ========================================================= */
+
 function joinExam(e) {
+
   e.preventDefault();
 
   const db = getDB();
 
   const roomCode =
     document
-      .getElementById('roomCode')
+      .getElementById(
+        'roomCode'
+      )
       .value
       .trim()
       .toUpperCase();
 
   const roomPassword =
     document
-      .getElementById('roomPassword')
+      .getElementById(
+        'roomPassword'
+      )
       .value
       .trim();
 
-  const ex =
-    db.exams.find(
-      x =>
-        x.roomCode.toUpperCase() ===
-        roomCode
-    );
-
-  const msg =
+  const message =
     document.getElementById(
       'joinMessage'
     );
 
+  const exam =
+    db.exams.find(
+      x =>
+        String(
+          x.roomCode
+        ).toUpperCase() ===
+        roomCode
+    );
+
   if (
-    !ex ||
-    ex.roomPassword !== roomPassword
+    !exam ||
+    exam.roomPassword !==
+      roomPassword
   ) {
-    msg.innerHTML =
-      '<div class="notice" style="background:#fff0f1;color:#a73542">Room code or password is incorrect.</div>';
+
+    if (message) {
+
+      message.innerHTML = `
+        <div
+          class="notice"
+          style="
+            background:#fff0f1;
+            color:#a73542
+          "
+        >
+          Room code or password is incorrect.
+        </div>
+      `;
+
+    }
 
     return;
   }
 
-  if (!ex.questionIds.length) {
-    msg.innerHTML =
-      '<div class="notice">This room has no questions yet. Ask your examiner to add questions.</div>';
+  const status =
+    formatStatus(exam);
+
+  if (status === 'completed') {
+
+    if (message) {
+
+      message.innerHTML = `
+        <div class="notice">
+          This examination has already ended.
+        </div>
+      `;
+
+    }
+
+    return;
+  }
+
+  if (
+    !exam.questionIds ||
+    !exam.questionIds.length
+  ) {
+
+    if (message) {
+
+      message.innerHTML = `
+        <div class="notice">
+          This room has no questions yet.
+          Ask your examiner to add questions.
+        </div>
+      `;
+
+    }
 
     return;
   }
 
   sessionStorage.setItem(
     'examora_current_exam',
-    ex.id
+    exam.id
   );
 
   sessionStorage.setItem(
@@ -1950,25 +3033,42 @@ function joinExam(e) {
     'Demo Student'
   );
 
-  location.href = 'exam.html';
+  sessionStorage.removeItem(
+    'examora_answers'
+  );
+
+  sessionStorage.removeItem(
+    'examora_reviews'
+  );
+
+  location.href =
+    'exam.html';
 }
 
+
+/* =========================================================
+   LIVE EXAM
+   ========================================================= */
+
 function initLiveExam() {
+
   restoreTheme();
 
-  const id =
+  const examId =
     sessionStorage.getItem(
       'examora_current_exam'
     );
 
   const db = getDB();
 
-  const ex =
+  const exam =
     db.exams.find(
-      e => e.id === id
+      e =>
+        e.id === examId
     );
 
-  if (!ex) {
+  if (!exam) {
+
     location.href =
       'student.html';
 
@@ -1976,23 +3076,79 @@ function initLiveExam() {
   }
 
   const questions =
-    ex.questionIds
+    (exam.questionIds || [])
       .map(
-        qid =>
+        questionId =>
           db.questions.find(
-            q => q.id === qid
+            q =>
+              q.id === questionId
           )
       )
       .filter(Boolean);
 
   if (!questions.length) {
+
     location.href =
       'student.html';
 
     return;
   }
 
-  let idx = 0;
+  const scheduledStart =
+    getExamStartTime(exam);
+
+  const scheduledEnd =
+    getExamEndTime(exam);
+
+  const now =
+    Date.now();
+
+  if (
+    Number.isNaN(
+      scheduledStart
+    ) ||
+    Number.isNaN(
+      scheduledEnd
+    )
+  ) {
+
+    alert(
+      'This examination has an invalid schedule.'
+    );
+
+    location.href =
+      'student.html';
+
+    return;
+  }
+
+  if (now < scheduledStart) {
+
+    alert(
+      `This examination has not started yet.\n\nStart time: ${exam.date} ${exam.startTime}`
+    );
+
+    location.href =
+      'student.html';
+
+    return;
+  }
+
+  if (now >= scheduledEnd) {
+
+    alert(
+      'This examination has already ended.'
+    );
+
+    location.href =
+      'student.html';
+
+    return;
+  }
+
+  let index = 0;
+
+  let submitted = false;
 
   let answers =
     JSON.parse(
@@ -2008,281 +3164,434 @@ function initLiveExam() {
       ) || '{}'
     );
 
-  document.getElementById(
-    'liveExamTitle'
-  ).textContent = ex.title;
-
-  const start = Date.now();
-
-  const end =
-    start +
-    ex.duration * 60000;
-
-  function saveProgress() {
-    sessionStorage.setItem(
-      'examora_answers',
-      JSON.stringify(answers)
+  const title =
+    document.getElementById(
+      'liveExamTitle'
     );
 
-    document.getElementById(
-      'saveState'
-    ).textContent = 'Saved ✓';
+  if (title) {
+    title.textContent =
+      exam.title;
+  }
+
+  function saveProgress() {
+
+    sessionStorage.setItem(
+      'examora_answers',
+      JSON.stringify(
+        answers
+      )
+    );
+
+    const state =
+      document.getElementById(
+        'saveState'
+      );
+
+    if (state) {
+      state.textContent =
+        'Saved ✓';
+    }
   }
 
   function render() {
-    const q =
-      questions[idx];
 
-    document.getElementById(
-      'questionNumber'
-    ).textContent =
-      `Question ${idx + 1}`;
+    const question =
+      questions[index];
 
-    document.getElementById(
-      'questionMarks'
-    ).textContent =
-      `${q.marks} mark${
-        q.marks == 1 ? '' : 's'
-      }`;
+    if (!question) return;
 
-    document.getElementById(
-      'questionText'
-    ).textContent =
-      q.text;
+    const number =
+      document.getElementById(
+        'questionNumber'
+      );
 
-    document.getElementById(
-      'progressText'
-    ).textContent =
-      `${idx + 1} / ${
-        questions.length
-      }`;
+    if (number) {
 
-    const val =
-      answers[q.id] ?? '';
+      number.textContent =
+        `Question ${
+          index + 1
+        }`;
+
+    }
+
+    const marks =
+      document.getElementById(
+        'questionMarks'
+      );
+
+    if (marks) {
+
+      marks.textContent =
+        `${question.marks} mark${
+          question.marks == 1
+            ? ''
+            : 's'
+        }`;
+
+    }
+
+    const text =
+      document.getElementById(
+        'questionText'
+      );
+
+    if (text) {
+
+      text.textContent =
+        question.text;
+
+    }
+
+    const progress =
+      document.getElementById(
+        'progressText'
+      );
+
+    if (progress) {
+
+      progress.textContent =
+        `${index + 1} / ${
+          questions.length
+        }`;
+
+    }
+
+    const value =
+      answers[
+        question.id
+      ] ?? '';
 
     let html = '';
 
-    if (q.type === 'mcq') {
+    if (
+      question.type ===
+      'mcq'
+    ) {
 
       html = `
+
         <div class="answer-options">
 
           ${['A', 'B', 'C', 'D']
-            .map(
-              k => `
-                <label
-                  class="answer-option ${
-                    val === k
+            .map(letter => `
+
+              <label
+                class="
+                  answer-option
+                  ${
+                    value ===
+                    letter
                       ? 'selected'
                       : ''
-                  }"
+                  }
+                "
+              >
+
+                <input
+                  type="radio"
+                  name="ans"
+                  value="${letter}"
+                  ${
+                    value ===
+                    letter
+                      ? 'checked'
+                      : ''
+                  }
                 >
 
-                  <input
-                    type="radio"
-                    name="ans"
-                    value="${k}"
-                    ${
-                      val === k
-                        ? 'checked'
-                        : ''
-                    }
-                  >
+                <b>
+                  ${letter}.
+                </b>
 
-                  <b>
-                    ${k}.
-                  </b>
+                ${esc(
+                  question
+                    .options?.[
+                      letter
+                    ] || ''
+                )}
 
-                  ${esc(
-                    q.options[k]
-                  )}
+              </label>
 
-                </label>
-              `
-            )
+            `)
             .join('')}
 
         </div>
+
       `;
 
-    } else if (
-      q.type === 'truefalse'
+    }
+
+    else if (
+      question.type ===
+      'truefalse'
     ) {
 
       html = `
+
         <div class="answer-options">
 
-          ${['True', 'False']
-            .map(
-              v => `
-                <label
-                  class="answer-option ${
-                    val === v
+          ${[
+            'True',
+            'False'
+          ]
+            .map(answerValue => `
+
+              <label
+                class="
+                  answer-option
+                  ${
+                    value ===
+                    answerValue
                       ? 'selected'
                       : ''
-                  }"
+                  }
+                "
+              >
+
+                <input
+                  type="radio"
+                  name="ans"
+                  value="${answerValue}"
+                  ${
+                    value ===
+                    answerValue
+                      ? 'checked'
+                      : ''
+                  }
                 >
 
-                  <input
-                    type="radio"
-                    name="ans"
-                    value="${v}"
-                    ${
-                      val === v
-                        ? 'checked'
-                        : ''
-                    }
-                  >
+                ${answerValue}
 
-                  ${v}
+              </label>
 
-                </label>
-              `
-            )
+            `)
             .join('')}
 
         </div>
+
       `;
 
-    } else if (
-      q.type === 'numerical'
+    }
+
+    else if (
+      question.type ===
+      'numerical'
     ) {
 
       html = `
+
         <input
           id="textAnswer"
           type="number"
           step="any"
-          placeholder="Enter your numerical answer..."
-          value="${esc(val)}"
+          placeholder="
+            Enter your numerical answer...
+          "
+          value="${esc(value)}"
         >
+
       `;
 
-    } else {
+    }
+
+    else {
 
       html = `
+
         <textarea
           id="textAnswer"
           rows="8"
-          placeholder="Write your answer here..."
-        >${esc(val)}</textarea>
+          placeholder="
+            Write your answer here...
+          "
+        >${esc(value)}</textarea>
+
       `;
+
     }
 
-    document.getElementById(
-      'answerArea'
-    ).innerHTML = html;
+    const answerArea =
+      document.getElementById(
+        'answerArea'
+      );
+
+    if (answerArea) {
+
+      answerArea.innerHTML =
+        html;
+
+    }
 
     document
       .querySelectorAll(
-        'input[name=ans]'
+        'input[name="ans"]'
       )
-      .forEach(r => {
+      .forEach(radio => {
 
-        r.addEventListener(
+        radio.addEventListener(
           'change',
           () => {
 
-            answers[q.id] =
-              r.value;
+            answers[
+              question.id
+            ] =
+              radio.value;
 
             saveProgress();
 
             render();
+
           }
         );
+
       });
 
     document
-      .getElementById('textAnswer')
+      .getElementById(
+        'textAnswer'
+      )
       ?.addEventListener(
         'input',
-        e => {
+        event => {
 
-          answers[q.id] =
-            e.target.value;
+          answers[
+            question.id
+          ] =
+            event.target.value;
 
           saveProgress();
+
         }
       );
 
-    document.getElementById(
-      'answeredCount'
-    ).textContent =
-      Object.values(
-        answers
-      ).filter(
-        v =>
-          String(v).trim()
-      ).length;
+    const answeredCount =
+      document.getElementById(
+        'answeredCount'
+      );
 
-    const rb =
+    if (answeredCount) {
+
+      answeredCount.textContent =
+        Object.values(
+          answers
+        ).filter(
+          value =>
+            String(
+              value
+            ).trim() !== ''
+        ).length;
+
+    }
+
+    const reviewButton =
       document.getElementById(
         'reviewButton'
       );
 
-    if (rb) {
+    if (reviewButton) {
 
       const marked =
-        !!reviews[q.id];
+        !!reviews[
+          question.id
+        ];
 
-      rb.classList.toggle(
+      reviewButton.classList.toggle(
         'active',
         marked
       );
 
-      rb.textContent =
+      reviewButton.textContent =
         marked
           ? '★ Marked for review'
           : '☆ Mark for review';
+
     }
 
-    document.getElementById(
-      'questionNavGrid'
-    ).innerHTML =
-      questions
-        .map(
-          (qq, i) => `
-            <button
-              class="
-                ${
-                  answers[qq.id]
-                    ? 'answered'
-                    : ''
-                }
-                ${
-                  reviews[qq.id]
-                    ? 'review'
-                    : ''
-                }
-              "
-              onclick="window.examGo(${i})"
-            >
-              ${i + 1}
-            </button>
-          `
-        )
-        .join('');
+    const navGrid =
+      document.getElementById(
+        'questionNavGrid'
+      );
+
+    if (navGrid) {
+
+      navGrid.innerHTML =
+        questions
+          .map(
+            (q, i) => `
+
+              <button
+                class="
+                  ${
+                    String(
+                      answers[
+                        q.id
+                      ] ?? ''
+                    ).trim()
+                      ? 'answered'
+                      : ''
+                  }
+
+                  ${
+                    reviews[
+                      q.id
+                    ]
+                      ? 'review'
+                      : ''
+                  }
+                "
+                onclick="
+                  window.examGo(${i})
+                "
+              >
+                ${i + 1}
+              </button>
+
+            `
+          )
+          .join('');
+
+    }
+
   }
 
-  window.examGo = i => {
-    saveProgress();
 
-    idx = i;
+  /* =======================================================
+     EXAM NAVIGATION
+     ======================================================= */
 
-    render();
-  };
+  window.examGo =
+    questionIndex => {
+
+      saveProgress();
+
+      if (
+        questionIndex < 0 ||
+        questionIndex >=
+          questions.length
+      ) {
+        return;
+      }
+
+      index =
+        questionIndex;
+
+      render();
+    };
 
   window.previousQuestion =
     () => {
 
       saveProgress();
 
-      if (idx > 0) {
-        idx--;
+      if (index > 0) {
+
+        index--;
 
         render();
+
       }
+
     };
 
   window.nextQuestion =
@@ -2291,35 +3600,331 @@ function initLiveExam() {
       saveProgress();
 
       if (
-        idx <
+        index <
         questions.length - 1
       ) {
-        idx++;
+
+        index++;
 
         render();
+
       }
+
     };
 
   window.toggleReview =
     () => {
 
-      reviews[
-        questions[idx].id
-      ] =
-        !reviews[
-          questions[idx].id
-        ];
+      const id =
+        questions[index].id;
+
+      reviews[id] =
+        !reviews[id];
 
       sessionStorage.setItem(
         'examora_reviews',
-        JSON.stringify(reviews)
+        JSON.stringify(
+          reviews
+        )
       );
 
       render();
+
     };
+
+
+  /* =======================================================
+     SUBMIT EXAM
+     ======================================================= */
+
+  function submitExamInternal(
+    automatic = false
+  ) {
+
+    if (submitted) {
+      return;
+    }
+
+    submitted = true;
+
+    saveProgress();
+
+    const attempt = {
+
+      id:
+        uid('attempt'),
+
+      examId:
+        exam.id,
+
+      studentName:
+        sessionStorage.getItem(
+          'examora_student'
+        ) ||
+        'Demo Student',
+
+      studentEmail:
+        'student@example.com',
+
+      submittedAt:
+        new Date()
+          .toLocaleString(),
+
+      total:
+        questions.reduce(
+          (sum, q) =>
+            sum +
+            Number(
+              q.marks
+            ),
+          0
+        ),
+
+      score: 0,
+
+      gradingStatus:
+        'checked',
+
+      answers: []
+
+    };
+
+
+    attempt.answers =
+      questions.map(
+        question => {
+
+          const value =
+            answers[
+              question.id
+            ] ?? '';
+
+          const cleanValue =
+            String(
+              value
+            ).trim();
+
+          let correct =
+            false;
+
+          let awarded =
+            0;
+
+
+          /* MCQ */
+
+          if (
+            question.type ===
+            'mcq'
+          ) {
+
+            correct =
+              cleanValue
+                .toUpperCase() ===
+              String(
+                question.correct
+              )
+                .trim()
+                .toUpperCase();
+
+          }
+
+
+          /* TRUE / FALSE */
+
+          else if (
+            question.type ===
+            'truefalse'
+          ) {
+
+            correct =
+              cleanValue
+                .toLowerCase() ===
+              String(
+                question.correct
+              )
+                .trim()
+                .toLowerCase();
+
+          }
+
+
+          /* NUMERICAL */
+
+          else if (
+            question.type ===
+            'numerical'
+          ) {
+
+            const studentNumber =
+              Number(
+                cleanValue
+              );
+
+            const expectedNumber =
+              Number(
+                question.correct
+              );
+
+            correct =
+              cleanValue !== '' &&
+              Number.isFinite(
+                studentNumber
+              ) &&
+              Number.isFinite(
+                expectedNumber
+              ) &&
+              Math.abs(
+                studentNumber -
+                expectedNumber
+              ) < 0.01;
+
+          }
+
+
+          /* AUTOMATIC MARKING */
+
+          if (
+            !question.manual
+          ) {
+
+            if (correct) {
+
+              awarded =
+                Number(
+                  question.marks
+                );
+
+            }
+
+            else if (
+              cleanValue !== '' &&
+              question.negativeMarks >
+                0
+            ) {
+
+              awarded =
+                -Number(
+                  question
+                    .negativeMarks
+                );
+
+            }
+
+          }
+
+
+          return {
+
+            questionId:
+              question.id,
+
+            value:
+              cleanValue,
+
+            isCorrect:
+              correct,
+
+            awarded,
+
+            reviewed:
+              !question.manual,
+
+            feedback:
+              ''
+
+          };
+
+        }
+      );
+
+
+    const hasManual =
+      attempt.answers.some(
+        answer => {
+
+          const question =
+            db.questions.find(
+              q =>
+                q.id ===
+                answer.questionId
+            );
+
+          return !!question?.manual;
+
+        }
+      );
+
+
+    if (hasManual) {
+
+      attempt.gradingStatus =
+        'pending';
+
+    }
+
+
+    attempt.score =
+      attempt.answers.reduce(
+        (sum, answer) =>
+          sum +
+          Number(
+            answer.awarded || 0
+          ),
+        0
+      );
+
+
+    /*
+     * Optional: prevent negative
+     * total score.
+     */
+
+    attempt.score =
+      Math.max(
+        0,
+        attempt.score
+      );
+
+
+    db.attempts.push(
+      attempt
+    );
+
+    saveDB(db);
+
+    logEvent(
+      `Student submitted "${exam.title}"${
+        automatic
+          ? ' automatically after time expired'
+          : ''
+      }`
+    );
+
+    sessionStorage.removeItem(
+      'examora_answers'
+    );
+
+    sessionStorage.removeItem(
+      'examora_reviews'
+    );
+
+    sessionStorage.setItem(
+      'examora_last_attempt',
+      attempt.id
+    );
+
+    location.href =
+      'result.html';
+  }
+
 
   window.submitExam =
     () => {
+
+      if (submitted) {
+        return;
+      }
 
       if (
         !confirm(
@@ -2329,224 +3934,130 @@ function initLiveExam() {
         return;
       }
 
-      saveProgress();
-
-      const attempt = {
-        id: uid('attempt'),
-
-        examId: ex.id,
-
-        studentName:
-          'Demo Student',
-
-        studentEmail:
-          'student@example.com',
-
-        submittedAt:
-          new Date().toLocaleString(),
-
-        total:
-          questions.reduce(
-            (s, q) =>
-              s + q.marks,
-            0
-          ),
-
-        score: 0,
-
-        gradingStatus:
-          'checked',
-
-        answers: []
-      };
-
-      attempt.answers =
-        questions.map(q => {
-
-          const v =
-            answers[q.id] ?? '';
-
-          let correct = false;
-
-          let awarded = 0;
-
-          if (
-            q.type === 'mcq'
-          ) {
-
-            correct =
-              v.toUpperCase() ===
-              q.correct.toUpperCase();
-
-          } else if (
-            q.type ===
-            'truefalse'
-          ) {
-
-            correct =
-              v.toLowerCase() ===
-              q.correct.toLowerCase();
-
-          } else if (
-            q.type ===
-            'numerical'
-          ) {
-
-            correct =
-              v !== '' &&
-              Number.isFinite(
-                Number(v)
-              ) &&
-              Math.abs(
-                Number(v) -
-                Number(q.correct)
-              ) < 0.01;
-          }
-
-          if (correct) {
-
-            awarded =
-              q.marks;
-
-          } else if (
-            v &&
-            !q.manual &&
-            q.negativeMarks
-          ) {
-
-            awarded =
-              -q.negativeMarks;
-          }
-
-          return {
-            questionId: q.id,
-            value: v,
-            isCorrect: correct,
-            awarded,
-            reviewed: !q.manual,
-            feedback: ''
-          };
-        });
-
-      if (
-        attempt.answers.some(
-          x =>
-            db.questions.find(
-              q =>
-                q.id ===
-                x.questionId
-            )?.manual
-        )
-      ) {
-
-        attempt.gradingStatus =
-          'pending';
-      }
-
-      attempt.score =
-        attempt.answers.reduce(
-          (s, x) =>
-            s +
-            Number(
-              x.awarded || 0
-            ),
-          0
-        );
-
-      db.attempts.push(
-        attempt
+      submitExamInternal(
+        false
       );
 
-      saveDB(db);
-
-      logEvent(
-        `Student submitted “${ex.title}”`
-      );
-
-      sessionStorage.removeItem(
-        'examora_answers'
-      );
-
-      sessionStorage.removeItem(
-        'examora_reviews'
-      );
-
-      sessionStorage.setItem(
-        'examora_last_attempt',
-        attempt.id
-      );
-
-      location.href =
-        'result.html';
     };
+
+
+  /* =======================================================
+     TIMER
+     ======================================================= */
+
+  let timerFinished =
+    false;
 
   function tick() {
 
-    const left =
+    if (submitted) {
+      return;
+    }
+
+    const remaining =
       Math.max(
         0,
-        end - Date.now()
+        scheduledEnd -
+          Date.now()
       );
 
-    const mins =
+    const minutes =
       Math.floor(
-        left / 60000
+        remaining /
+          60000
       );
 
-    const secs =
+    const seconds =
       Math.floor(
-        left / 1000
+        remaining /
+          1000
       ) % 60;
 
-    document.getElementById(
-      'timer'
-    ).textContent =
-      `${String(mins).padStart(
-        2,
-        '0'
-      )}:${String(secs).padStart(
-        2,
-        '0'
-      )}`;
-
-    if (left <= 0) {
-
-      window.submitExam();
-
-    } else {
-
-      setTimeout(
-        tick,
-        1000
+    const timer =
+      document.getElementById(
+        'timer'
       );
+
+    if (timer) {
+
+      timer.textContent =
+        `${String(
+          minutes
+        ).padStart(
+          2,
+          '0'
+        )}:${String(
+          seconds
+        ).padStart(
+          2,
+          '0'
+        )}`;
+
     }
+
+    if (
+      remaining <= 0
+    ) {
+
+      if (!timerFinished) {
+
+        timerFinished =
+          true;
+
+        alert(
+          'Time is over. Your examination will be submitted automatically.'
+        );
+
+        submitExamInternal(
+          true
+        );
+
+      }
+
+      return;
+    }
+
+    setTimeout(
+      tick,
+      1000
+    );
   }
+
 
   render();
 
   tick();
 }
 
+
+/* =========================================================
+   RESULT PAGE
+   ========================================================= */
+
 function initResult() {
-  const id =
+
+  const attemptId =
     sessionStorage.getItem(
       'examora_last_attempt'
     );
 
   const db = getDB();
 
-  const a =
+  const attempt =
     db.attempts.find(
-      x => x.id === id
+      x =>
+        x.id === attemptId
     );
 
-  const ex =
-    a &&
+  const exam =
+    attempt &&
     db.exams.find(
-      e => e.id === a.examId
+      e =>
+        e.id ===
+        attempt.examId
     );
 
-  if (!a) {
+  if (!attempt) {
 
     location.href =
       'student.html';
@@ -2554,55 +4065,115 @@ function initResult() {
     return;
   }
 
-  document.getElementById(
-    'resultTitle'
-  ).textContent =
-    ex?.title || 'Result';
+  const title =
+    document.getElementById(
+      'resultTitle'
+    );
 
-  document.getElementById(
-    'resultScore'
-  ).textContent =
-    a.score;
+  if (title) {
 
-  document.getElementById(
-    'resultTotal'
-  ).textContent =
-    a.total;
+    title.textContent =
+      exam?.title ||
+      'Result';
 
-  document.getElementById(
-    'resultPercent'
-  ).textContent =
-    (
-      a.total
-        ? (a.score / a.total) * 100
-        : 0
-    ).toFixed(1) + '%';
+  }
 
-  document.getElementById(
-    'resultCorrect'
-  ).textContent =
-    a.answers.filter(
-      x => x.isCorrect
-    ).length;
+  const score =
+    document.getElementById(
+      'resultScore'
+    );
 
-  document.getElementById(
-    'resultStatus'
-  ).textContent =
-    a.gradingStatus ===
-    'checked'
-      ? 'Checked'
-      : 'Under review';
+  if (score) {
+    score.textContent =
+      attempt.score;
+  }
 
-  document.getElementById(
-    'resultNote'
-  ).textContent =
-    a.gradingStatus ===
-    'pending'
-      ? 'Your subjective answers have been sent to the examiner for manual checking. Your final result will update after checking.'
-      : 'Your objective answers were evaluated automatically.';
+  const total =
+    document.getElementById(
+      'resultTotal'
+    );
+
+  if (total) {
+    total.textContent =
+      attempt.total;
+  }
+
+  const percent =
+    document.getElementById(
+      'resultPercent'
+    );
+
+  if (percent) {
+
+    percent.textContent =
+      (
+        attempt.total
+          ? (
+              attempt.score /
+              attempt.total
+            ) *
+            100
+          : 0
+      ).toFixed(1) +
+      '%';
+
+  }
+
+  const correct =
+    document.getElementById(
+      'resultCorrect'
+    );
+
+  if (correct) {
+
+    correct.textContent =
+      attempt.answers.filter(
+        answer =>
+          answer.isCorrect
+      ).length;
+
+  }
+
+  const status =
+    document.getElementById(
+      'resultStatus'
+    );
+
+  if (status) {
+
+    status.textContent =
+      attempt.gradingStatus ===
+      'checked'
+        ? 'Checked'
+        : 'Under review';
+
+  }
+
+  const note =
+    document.getElementById(
+      'resultNote'
+    );
+
+  if (note) {
+
+    note.textContent =
+      attempt.gradingStatus ===
+      'pending'
+
+        ? 'Your subjective answers have been sent to the examiner for manual checking. Your final result will update after checking.'
+
+        : 'Your objective answers were evaluated automatically.';
+
+  }
 }
 
+
+/* =========================================================
+   STUDENT HISTORY
+   ========================================================= */
+
 function renderStudentHistory() {
+
   const db = getDB();
 
   const attempts =
@@ -2617,57 +4188,96 @@ function renderStudentHistory() {
       'historyList'
     );
 
+  if (!box) return;
+
   box.innerHTML =
     attempts.length
+
       ? attempts
-          .map(
-            a => `
+          .map(attempt => {
+
+            const exam =
+              db.exams.find(
+                e =>
+                  e.id ===
+                  attempt.examId
+              );
+
+            const checked =
+              attempt.gradingStatus ===
+              'checked';
+
+            return `
+
               <div class="exam-row">
 
                 <div>
 
                   <b>
                     ${esc(
-                      db.exams.find(
-                        e =>
-                          e.id ===
-                          a.examId
-                      )?.title ||
+                      exam?.title ||
                       'Exam'
                     )}
                   </b>
 
                   <div class="exam-meta">
                     ${esc(
-                      a.submittedAt
+                      attempt.submittedAt
                     )}
                   </div>
 
                 </div>
 
                 <span>
-                  ${a.score}/${a.total}
+                  ${
+                    checked
+                      ? `${attempt.score}/${attempt.total}`
+                      : '—'
+                  }
                 </span>
 
                 <span
                   class="badge ${
-                    a.gradingStatus ===
-                    'checked'
+                    checked
                       ? 'published'
                       : 'review'
                   }"
                 >
+
                   ${
-                    a.gradingStatus ===
-                    'checked'
+                    checked
                       ? 'Checked'
                       : 'Under review'
                   }
+
                 </span>
 
               </div>
-            `
-          )
+
+            `;
+
+          })
           .join('')
-      : '<div class="empty">No examination history.</div>';
+
+      : `
+
+          <div class="empty">
+            No examination history.
+          </div>
+
+        `;
 }
+
+
+/* =========================================================
+   GLOBAL INITIALIZATION SUPPORT
+   ========================================================= */
+
+window.addEventListener(
+  'DOMContentLoaded',
+  () => {
+
+    restoreTheme();
+
+  }
+);
