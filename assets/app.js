@@ -6021,3 +6021,175 @@ document.addEventListener('DOMContentLoaded', function () {
   examoraShowStudentIdentityNotice();
   examoraProtectMobileAdminLink();
 });
+/* =========================================================
+   EXAMORA MOBILE MENU
+   ========================================================= */
+
+(function initExamoraMobileMenu() {
+
+    function setupMobileMenu() {
+
+        const sidebar = document.querySelector(".sidebar");
+        const topbar = document.querySelector(".topbar");
+
+        if (!sidebar || !topbar) return;
+
+        /* Prevent duplicate menu */
+        if (document.querySelector(".mobile-menu-btn")) return;
+
+        /* Create hamburger button */
+        const menuButton = document.createElement("button");
+
+        menuButton.className = "mobile-menu-btn";
+        menuButton.type = "button";
+        menuButton.setAttribute("aria-label", "Open menu");
+        menuButton.setAttribute("title", "Menu");
+        menuButton.innerHTML = "☰";
+
+        /* Put hamburger before top actions */
+        const topActions = topbar.querySelector(".top-actions");
+
+        if (topActions) {
+            topbar.insertBefore(menuButton, topActions);
+        } else {
+            topbar.appendChild(menuButton);
+        }
+
+        /* Create overlay */
+        const overlay = document.createElement("div");
+
+        overlay.className = "mobile-menu-overlay";
+
+        document.body.appendChild(overlay);
+
+        /* Close button inside sidebar */
+        const closeWrap = document.createElement("div");
+
+        closeWrap.className = "mobile-menu-close";
+
+        closeWrap.innerHTML = `
+            <button type="button"
+                    aria-label="Close menu"
+                    title="Close menu">
+                ×
+            </button>
+        `;
+
+        sidebar.insertBefore(closeWrap, sidebar.firstChild);
+
+        const closeButton =
+            closeWrap.querySelector("button");
+
+        function openMenu() {
+
+            sidebar.classList.add("mobile-open");
+
+            overlay.classList.add("active");
+
+            document.body.classList.add("mobile-menu-active");
+
+            menuButton.innerHTML = "✕";
+
+            menuButton.setAttribute(
+                "aria-label",
+                "Close menu"
+            );
+        }
+
+        function closeMenu() {
+
+            sidebar.classList.remove("mobile-open");
+
+            overlay.classList.remove("active");
+
+            document.body.classList.remove(
+                "mobile-menu-active"
+            );
+
+            menuButton.innerHTML = "☰";
+
+            menuButton.setAttribute(
+                "aria-label",
+                "Open menu"
+            );
+        }
+
+        function toggleMenu() {
+
+            if (sidebar.classList.contains("mobile-open")) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        }
+
+        menuButton.addEventListener(
+            "click",
+            toggleMenu
+        );
+
+        closeButton.addEventListener(
+            "click",
+            closeMenu
+        );
+
+        overlay.addEventListener(
+            "click",
+            closeMenu
+        );
+
+        /* Close after selecting any navigation item */
+        sidebar.querySelectorAll(".nav-item").forEach(function(item) {
+
+            item.addEventListener("click", function() {
+
+                setTimeout(function() {
+                    closeMenu();
+                }, 80);
+
+            });
+
+        });
+
+        /* ESC closes menu */
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (
+                    event.key === "Escape" &&
+                    sidebar.classList.contains("mobile-open")
+                ) {
+                    closeMenu();
+                }
+
+            }
+        );
+
+        /* If screen becomes desktop */
+        window.addEventListener(
+            "resize",
+            function() {
+
+                if (window.innerWidth > 1000) {
+                    closeMenu();
+                }
+
+            }
+        );
+    }
+
+    if (document.readyState === "loading") {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            setupMobileMenu
+        );
+
+    } else {
+
+        setupMobileMenu();
+
+    }
+
+})();
