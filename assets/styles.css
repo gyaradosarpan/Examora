@@ -3225,3 +3225,502 @@ body:not(.landing) .feature-stage,
 body:not(.landing) .feature-step{
   animation:none;
 }
+/* =========================================================
+   EXAMORA — DESKTOP MODAL FIX
+   View Exam / Password / ID / Delete Confirmation
+   ========================================================= */
+
+/* Main modal overlay */
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+
+  display:none;
+  align-items:center;
+  justify-content:center;
+
+  padding:24px;
+
+  background:rgba(15,23,42,.48);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+
+  overflow-y:auto;
+}
+
+/* When JS adds an active/open class */
+.modal.active,
+.modal.show,
+.modal.open{
+  display:flex;
+}
+
+/* Modal box — DESKTOP */
+.modal-box{
+  position:relative;
+
+  width:min(560px,100%);
+  max-height:min(760px,calc(100vh - 48px));
+
+  overflow-y:auto;
+
+  background:var(--surface);
+  color:var(--text);
+
+  border:1px solid var(--line);
+  border-radius:20px;
+
+  padding:24px;
+
+  box-shadow:
+    0 25px 80px rgba(15,23,42,.20),
+    0 8px 30px rgba(15,23,42,.10);
+
+  animation:examoraModalDesktopIn .22s cubic-bezier(.2,.75,.25,1) both;
+}
+
+/* Modal heading */
+.modal-box h2{
+  margin:0 0 8px;
+  color:var(--text);
+}
+
+/* Modal paragraph */
+.modal-box p{
+  color:var(--muted);
+  line-height:1.55;
+}
+
+/* Close button */
+.modal-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+
+  width:34px;
+  height:34px;
+
+  border:0;
+  border-radius:10px;
+
+  background:#f1f4f9;
+  color:#52617a;
+
+  display:grid;
+  place-items:center;
+
+  cursor:pointer;
+  font-size:18px;
+  font-weight:800;
+
+  transition:
+    background .18s ease,
+    transform .18s ease;
+}
+
+.modal-close:hover{
+  background:#e7ebf3;
+  transform:scale(1.04);
+}
+
+/* Modal form */
+.modal-box form{
+  display:grid;
+  gap:14px;
+}
+
+/* Modal action buttons */
+.modal-box .form-actions{
+  padding:18px 0 0;
+}
+
+/* Credential / password content */
+.modal-box .room-credential-card{
+  width:100%;
+}
+
+/* Modal animation */
+@keyframes examoraModalDesktopIn{
+  from{
+    opacity:0;
+    transform:translateY(12px) scale(.97);
+  }
+
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+
+/* =========================================================
+   DELETE CONFIRMATION MODAL
+   ========================================================= */
+
+.modal-box.delete-modal{
+  width:min(460px,100%);
+}
+
+.delete-modal .delete-icon{
+  width:48px;
+  height:48px;
+
+  border-radius:14px;
+
+  background:#fff0f1;
+  color:var(--danger);
+
+  display:grid;
+  place-items:center;
+
+  font-size:21px;
+  font-weight:900;
+
+  margin-bottom:15px;
+}
+
+.delete-modal .delete-title{
+  margin-bottom:7px;
+}
+
+.delete-modal .delete-text{
+  color:var(--muted);
+  line-height:1.55;
+  margin-bottom:18px;
+}
+
+.delete-modal .delete-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+
+/* =========================================================
+   VIEW EXAM / ROOM CREDENTIAL MODAL
+   ========================================================= */
+
+.view-exam-modal .room-credential-card{
+  margin-top:15px;
+}
+
+.view-exam-modal .credential-value{
+  word-break:break-word;
+}
+
+
+/* =========================================================
+   DARK MODE — MODALS
+   ========================================================= */
+
+body.dark .modal{
+  background:rgba(0,0,0,.62);
+}
+
+body.dark .modal-box{
+  background:var(--surface);
+  color:var(--text);
+
+  border-color:var(--line);
+
+  box-shadow:
+    0 30px 90px rgba(0,0,0,.48),
+    0 8px 30px rgba(0,0,0,.28);
+}
+
+body.dark .modal-close{
+  background:#243047;
+  color:#edf3ff;
+}
+
+body.dark .modal-close:hover{
+  background:#2d3b56;
+}
+
+body.dark .delete-modal .delete-icon{
+  background:#3a1d25;
+  color:#ff9da8;
+}
+
+
+/* =========================================================
+   MOBILE — KEEP YOUR BOTTOM SHEET STYLE
+   ========================================================= */
+
+@media (max-width:700px){
+
+  .modal{
+    align-items:flex-end;
+    justify-content:center;
+
+    padding:10px;
+  }
+
+  .modal-box{
+    width:100%;
+    max-width:none;
+
+    max-height:92vh;
+
+    border-radius:20px 20px 0 0;
+
+    padding:
+      20px
+      16px
+      calc(20px + env(safe-area-inset-bottom));
+
+    animation:modalUp .24s cubic-bezier(.2,.75,.25,1) both;
+  }
+
+  .modal-box.delete-modal{
+    width:100%;
+  }
+
+  .modal-box .form-actions{
+    padding-top:16px;
+  }
+
+  .delete-modal .delete-actions{
+    flex-direction:column-reverse;
+  }
+
+  .delete-modal .delete-actions .btn{
+    width:100%;
+  }
+
+  @keyframes modalUp{
+    from{
+      opacity:0;
+      transform:translateY(25px);
+    }
+
+    to{
+      opacity:1;
+      transform:translateY(0);
+    }
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width:380px){
+
+  .modal{
+    padding:6px;
+  }
+
+  .modal-box{
+    padding:
+      18px
+      14px
+      calc(18px + env(safe-area-inset-bottom));
+  }
+}
+
+
+/* =========================================================
+   IN-SCREEN FLASH MESSAGE
+   Replaces browser alert()
+   ========================================================= */
+
+.examora-toast-container{
+  position:fixed;
+
+  top:84px;
+  right:24px;
+
+  z-index:2000;
+
+  width:min(380px,calc(100vw - 32px));
+
+  display:grid;
+  gap:10px;
+
+  pointer-events:none;
+}
+
+.examora-toast{
+  pointer-events:auto;
+
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+
+  background:var(--surface);
+  color:var(--text);
+
+  border:1px solid var(--line);
+  border-radius:14px;
+
+  padding:13px 15px;
+
+  box-shadow:
+    0 16px 45px rgba(20,35,70,.14);
+
+  animation:toastIn .25s cubic-bezier(.2,.75,.25,1) both;
+}
+
+.examora-toast-icon{
+  width:28px;
+  height:28px;
+
+  flex:0 0 28px;
+
+  border-radius:9px;
+
+  display:grid;
+  place-items:center;
+
+  font-size:13px;
+  font-weight:900;
+}
+
+.examora-toast-content{
+  min-width:0;
+  flex:1;
+}
+
+.examora-toast-title{
+  display:block;
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:3px;
+}
+
+.examora-toast-message{
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+}
+
+.examora-toast-close{
+  width:25px;
+  height:25px;
+
+  border:0;
+  background:transparent;
+
+  color:var(--muted);
+
+  cursor:pointer;
+  border-radius:7px;
+}
+
+.examora-toast-close:hover{
+  background:var(--surface2);
+}
+
+
+/* Toast types */
+
+.examora-toast.success{
+  border-color:#bde8dc;
+}
+
+.examora-toast.success .examora-toast-icon{
+  background:#e7f8f4;
+  color:var(--student);
+}
+
+.examora-toast.error{
+  border-color:#ffd0d5;
+}
+
+.examora-toast.error .examora-toast-icon{
+  background:#fff0f1;
+  color:var(--danger);
+}
+
+.examora-toast.warning{
+  border-color:#f3dcae;
+}
+
+.examora-toast.warning .examora-toast-icon{
+  background:#fff5df;
+  color:#a96b00;
+}
+
+.examora-toast.info{
+  border-color:#ced9ff;
+}
+
+.examora-toast.info .examora-toast-icon{
+  background:#eef2ff;
+  color:var(--primary);
+}
+
+
+@keyframes toastIn{
+  from{
+    opacity:0;
+    transform:translateX(25px);
+  }
+
+  to{
+    opacity:1;
+    transform:translateX(0);
+  }
+}
+
+@keyframes toastOut{
+  from{
+    opacity:1;
+    transform:translateX(0);
+  }
+
+  to{
+    opacity:0;
+    transform:translateX(25px);
+  }
+}
+
+.examora-toast.removing{
+  animation:toastOut .2s ease forwards;
+}
+
+
+/* Mobile toast */
+@media (max-width:700px){
+
+  .examora-toast-container{
+    top:auto;
+    right:12px;
+    left:12px;
+    bottom:82px;
+
+    width:auto;
+  }
+
+  .examora-toast{
+    width:100%;
+  }
+
+  @keyframes toastIn{
+    from{
+      opacity:0;
+      transform:translateY(15px);
+    }
+
+    to{
+      opacity:1;
+      transform:translateY(0);
+    }
+  }
+
+  @keyframes toastOut{
+    from{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    to{
+      opacity:0;
+      transform:translateY(15px);
+    }
+  }
+}
