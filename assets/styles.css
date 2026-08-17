@@ -207,3 +207,161 @@ body.dark .type-pills label:has(input:checked){
 
 /* Final question type and toast overrides */
 .type-pills{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;width:100%;}.type-pills label{min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);color:var(--text);font-size:12px;font-weight:800;cursor:pointer;transition:.15s ease;text-align:center;}.type-pills input{width:16px;height:16px;margin:0;accent-color:var(--primary);}.type-pills label:has(input:checked){background:#eef2ff;border-color:#8297ed;color:#2949c8;}body.dark .type-pills label{background:#111a2a;color:#dce5f5;border-color:var(--line);}body.dark .type-pills label:has(input:checked){background:#17264a;border-color:#5f7fe4;color:#b9caff;}@media(max-width:900px){.type-pills{grid-template-columns:repeat(3,minmax(0,1fr));}}@media(max-width:600px){.type-pills{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+
+/* =========================================================
+   EXAMORA DASHBOARD FIXES
+   Keeps every exam action inside its card and restores
+   lightweight page/card entrance animations.
+   ========================================================= */
+.view.active{
+  animation:examoraViewIn .28s ease both;
+}
+
+@keyframes examoraViewIn{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.stat-card,
+.section-card{
+  animation:examoraCardIn .34s ease both;
+}
+
+.stat-card:nth-child(2){animation-delay:.04s}
+.stat-card:nth-child(3){animation-delay:.08s}
+.stat-card:nth-child(4){animation-delay:.12s}
+
+@keyframes examoraCardIn{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.exam-row{
+  grid-template-columns:minmax(230px,1.45fr) minmax(145px,.72fr) minmax(140px,.78fr) 90px minmax(250px,1.25fr);
+  gap:14px;
+  min-width:0;
+  overflow:visible;
+}
+
+.exam-row > *{
+  min-width:0;
+}
+
+.exam-row .badge{
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.exam-row .room-secret{
+  min-width:0;
+  overflow:hidden;
+}
+
+.exam-row .room-secret .exam-meta{
+  flex:0 0 auto;
+}
+
+.exam-row .room-secret .secret-value{
+  min-width:0;
+  max-width:110px;
+}
+
+.exam-row .room-actions{
+  min-width:0;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:7px 12px;
+  white-space:normal;
+}
+
+.exam-row .room-actions .text-btn,
+.exam-row .room-actions .btn{
+  flex:0 0 auto;
+  white-space:nowrap;
+}
+
+.exam-row .room-actions .btn-primary{
+  padding:9px 11px;
+  font-size:11px;
+}
+
+.exam-row:hover{
+  background:linear-gradient(90deg,transparent,#f8faff,transparent);
+}
+
+body.dark .exam-row:hover{
+  background:linear-gradient(90deg,transparent,#111c30,transparent);
+}
+
+.badge.waiting{
+  background:#fff5df;
+  color:#9a6507;
+}
+
+.badge.ready{
+  background:#eef2ff;
+  color:#3f62e8;
+}
+
+body.dark .badge.waiting{
+  background:#3b301a;
+  color:#f2c56c;
+}
+
+body.dark .badge.ready{
+  background:#1c2b4c;
+  color:#91abff;
+}
+
+@media(max-width:1200px){
+  .exam-row{
+    grid-template-columns:minmax(220px,1.35fr) minmax(135px,.7fr) minmax(135px,.75fr) 80px minmax(220px,1.1fr);
+    gap:11px;
+  }
+  .exam-row .room-actions{gap:6px 9px;}
+}
+
+@media(max-width:900px){
+  .exam-row{
+    grid-template-columns:minmax(220px,1.5fr) minmax(130px,.8fr) minmax(130px,.8fr);
+    gap:10px 14px;
+  }
+  .exam-row > :nth-child(4){
+    grid-column:2;
+  }
+  .exam-row > :nth-child(5){
+    grid-column:1 / -1;
+    justify-content:flex-start;
+    padding-top:4px;
+  }
+}
+
+@media(max-width:700px){
+  .exam-row{
+    grid-template-columns:1fr;
+    gap:10px;
+    padding:17px 0;
+  }
+  .exam-row > :nth-child(4),
+  .exam-row > :nth-child(5){
+    grid-column:auto;
+  }
+  .exam-row .room-actions{
+    justify-content:flex-start;
+  }
+  .exam-row .room-secret{
+    justify-content:flex-start;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .view.active,.stat-card,.section-card{
+    animation:none !important;
+  }
+}
