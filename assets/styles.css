@@ -806,3 +806,164 @@ body.dark .badge.ready{
         animation-duration: 0.4s;
     }
 }
+/* =========================================================
+   EXAMORA FINAL ANIMATION OVERRIDE
+   ========================================================= */
+
+.view.active {
+    display: block !important;
+    animation: examoraFinalPageIn 0.5s ease-out !important;
+}
+
+@keyframes examoraFinalPageIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Dashboard cards */
+.view.active .stat-card {
+    animation: examoraFinalCardIn 0.55s ease-out both !important;
+}
+
+.view.active .stat-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.view.active .stat-card:nth-child(2) {
+    animation-delay: 0.10s;
+}
+
+.view.active .stat-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.view.active .stat-card:nth-child(4) {
+    animation-delay: 0.20s;
+}
+
+@keyframes examoraFinalCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* Section cards */
+.view.active .section-card {
+    animation: examoraFinalSectionIn 0.5s ease-out both !important;
+}
+
+@keyframes examoraFinalSectionIn {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Exam rows */
+.view.active .exam-row {
+    animation: examoraFinalRowIn 0.4s ease-out both !important;
+}
+
+.view.active .exam-row:nth-child(1) {
+    animation-delay: .05s;
+}
+
+.view.active .exam-row:nth-child(2) {
+    animation-delay: .10s;
+}
+
+.view.active .exam-row:nth-child(3) {
+    animation-delay: .15s;
+}
+
+.view.active .exam-row:nth-child(4) {
+    animation-delay: .20s;
+}
+
+@keyframes examoraFinalRowIn {
+    from {
+        opacity: 0;
+        transform: translateX(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+
+/* Buttons */
+.btn,
+.text-btn,
+.nav-item {
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease,
+        background .2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.nav-item:hover {
+    transform: translateX(3px);
+}
+
+
+/* Question type buttons */
+.type-pills label {
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease,
+        border-color .2s ease;
+}
+
+.type-pills label:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(63, 98, 232, .10);
+}
+
+
+/* Toast */
+.examora-toast {
+    animation: examoraFinalToastIn .3s ease-out both !important;
+}
+
+@keyframes examoraFinalToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(25px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
