@@ -83,6 +83,42 @@ function esc(value) {
   );
 }
 
+
+/* =========================================================
+   EXAMORA TOAST NOTIFICATIONS
+   ========================================================= */
+function showExamoraToast(message, type = 'info', title = '') {
+  let container = document.querySelector('.examora-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'examora-toast-container';
+    document.body.appendChild(container);
+  }
+  const validTypes = ['success','error','warning','info'];
+  if (!validTypes.includes(type)) type = 'info';
+  const toast = document.createElement('div');
+  toast.className = `examora-toast ${type}`;
+  const icons = {success:'✓',error:'!',warning:'!',info:'i'};
+  const titles = {success:'Success',error:'Error',warning:'Warning',info:'Notice'};
+  toast.innerHTML = `
+    <div class="examora-toast-icon">${icons[type]}</div>
+    <div class="examora-toast-content">
+      <span class="examora-toast-title">${esc(title || titles[type])}</span>
+      <span class="examora-toast-message">${esc(message)}</span>
+    </div>
+    <button class="examora-toast-close" type="button" aria-label="Close notification">×</button>`;
+  container.appendChild(toast);
+  const removeToast = () => {
+    if (!toast.isConnected) return;
+    toast.classList.add('hide');
+    setTimeout(() => { if (toast.isConnected) toast.remove(); }, 220);
+  };
+  toast.querySelector('.examora-toast-close')?.addEventListener('click', removeToast);
+  setTimeout(removeToast, 3500);
+}
+window.showExamoraToast = showExamoraToast;
+window.alert = function(message) { showExamoraToast(String(message ?? ''), 'info', 'Notice'); };
+
 function uid(prefix = 'id') {
   return (
     prefix +
@@ -451,12 +487,8 @@ function initExaminer() {
     getElement('examForm');
 
   if (examForm) {
-
-    examForm.addEventListener(
-      'submit',
-      createExam
-    );
-
+    examForm.onsubmit = createExam;
+    examForm.dataset.examoraBound = 'true';
   }
 
   renderExaminerDashboard();
@@ -543,168 +575,70 @@ function setupNegativeMarking() {
    ========================================================= */
 
 function createExam(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
 
-  e.preventDefault();
+  try {
+    const db = getDB();
+    const title = String(getElement('title')?.value || '').trim();
+    const subject = String(getElement('subject')?.value || '').trim();
+    const date = getElement('date')?.value || '';
+    const startTime = getElement('startTime')?.value || '';
+    const duration = Number(getElement('duration')?.value);
+    const passing = Number(getElement('passing')?.value || 0);
+    const maxStudentsValue = getElement('maxStudents')?.value || '';
+    const department = String(getElement('department')?.value || '').trim();
+    const instructions = String(getElement('instructions')?.value || '').trim();
+    const negativeEnabled = getElement('negative')?.checked === true;
+    const negativeMarksInput = Number(getElement('negativeMarks')?.value || 0);
+    const questionTypes = Array.from(document.querySelectorAll('.type-pills input[type="checkbox"]:checked')).map(input => input.value).filter(Boolean);
 
-  const db = getDB();
+    if (!title) { showExamoraToast('Please enter the examination title.','warning','Exam Title Required'); getElement('title')?.focus(); return false; }
+    if (!subject) { showExamoraToast('Please enter the examination subject.','warning','Subject Required'); getElement('subject')?.focus(); return false; }
+    if (!date) { showExamoraToast('Please select the examination date.','warning','Date Required'); getElement('date')?.focus(); return false; }
+    if (!startTime) { showExamoraToast('Please select the examination start time.','warning','Start Time Required'); getElement('startTime')?.focus(); return false; }
+    if (!Number.isFinite(duration) || duration <= 0) { showExamoraToast('Exam duration must be greater than 0 minutes.','warning','Invalid Duration'); getElement('duration')?.focus(); return false; }
+    if (!Number.isFinite(passing) || passing < 0) { showExamoraToast('Please enter valid passing marks.','warning','Invalid Passing Marks'); getElement('passing')?.focus(); return false; }
+    if (maxStudentsValue && (!Number.isFinite(Number(maxStudentsValue)) || Number(maxStudentsValue) <= 0)) { showExamoraToast('Maximum students must be a positive number.','warning','Invalid Student Limit'); getElement('maxStudents')?.focus(); return false; }
+    if (questionTypes.length === 0) { showExamoraToast('Select at least one question type for this examination.','warning','Question Type Required'); return false; }
+    if (negativeEnabled && (!Number.isFinite(negativeMarksInput) || negativeMarksInput < 0)) { showExamoraToast('Please enter valid negative marks.','warning','Invalid Negative Marks'); getElement('negativeMarks')?.focus(); return false; }
 
-  const title =
-    getElement('title')?.value.trim();
+    let roomCode;
+    do { roomCode = code(); } while (db.exams.some(exam => String(exam.roomCode || '').toUpperCase() === roomCode));
+    let roomPassword;
+    do { roomPassword = password(); } while (db.exams.some(exam => String(exam.roomPassword || '') === roomPassword));
 
-  const subject =
-    getElement('subject')?.value.trim();
+    const ex = {
+      id: uid('exam'), title, subject, date, startTime, duration, passing,
+      maxStudents: maxStudentsValue ? Number(maxStudentsValue) : null,
+      department, instructions,
+      negative: negativeEnabled,
+      negativeMarks: negativeEnabled ? Math.max(0, negativeMarksInput || 0) : 0,
+      allowedQuestionTypes: questionTypes,
+      roomCode, roomPassword, questionIds: [], startedAt: null,
+      status: 'waiting', created: new Date().toISOString(),
+      createdBy: db.user?.email || 'examiner@example.com'
+    };
 
-  const date =
-    getElement('date')?.value;
+    db.exams.unshift(ex);
+    saveDB(db);
+    logEvent(`Created examination "${ex.title}" with room ${ex.roomCode}`);
 
-  const startTime =
-    getElement('startTime')?.value;
+    const form = getElement('examForm');
+    if (form) form.reset();
+    const negative = getElement('negative');
+    const negativeMarks = getElement('negativeMarks');
+    if (negative) negative.checked = false;
+    if (negativeMarks) { negativeMarks.disabled = true; negativeMarks.value = '0.25'; }
 
-  const duration =
-    Number(
-      getElement('duration')?.value
-    );
-
-  const passing =
-    Number(
-      getElement('passing')?.value
-    );
-
-  const maxStudentsValue =
-    getElement('maxStudents')?.value;
-
-  const department =
-    getElement('department')?.value.trim();
-
-  const instructions =
-    getElement('instructions')?.value.trim();
-
-  const negativeEnabled =
-    getElement('negative')?.checked === true;
-
-  const negativeMarksInput =
-    Number(
-      getElement('negativeMarks')?.value
-    );
-
-  if (
-    !title ||
-    !subject ||
-    !date ||
-    !startTime ||
-    !Number.isFinite(duration) ||
-    duration <= 0
-  ) {
-
-    alert(
-      'Please fill all required examination fields.'
-    );
-
-    return;
+    renderExaminerDashboard();
+    showRoomCreated(ex);
+    showExamoraToast(`Exam "${ex.title}" and room ${ex.roomCode} were created successfully.`,'success','Exam Room Created');
+    return false;
+  } catch (error) {
+    console.error('Examora createExam error:', error);
+    showExamoraToast('Something went wrong while creating the examination. Check the browser console for details.','error','Create Exam Failed');
+    return false;
   }
-
-  const ex = {
-
-    id: uid('exam'),
-
-    title,
-
-    subject,
-
-    date,
-
-    startTime,
-
-    duration,
-
-    passing:
-      Number.isFinite(passing)
-        ? passing
-        : 0,
-
-    maxStudents:
-      maxStudentsValue
-        ? Number(maxStudentsValue)
-        : null,
-
-    department,
-
-    instructions,
-
-    negative:
-      negativeEnabled,
-
-    negativeMarks:
-      negativeEnabled &&
-      Number.isFinite(
-        negativeMarksInput
-      )
-        ? Math.max(
-            0,
-            negativeMarksInput
-          )
-        : 0,
-
-    roomCode:
-      code(),
-
-    roomPassword:
-      password(),
-
-    questionIds: [],
-
-    /*
-     * NEW:
-     * Exam is NOT started when created.
-     */
-    startedAt: null,
-
-    /*
-     * Helps make the state explicit.
-     */
-    status: 'waiting',
-
-    created:
-      new Date().toISOString()
-
-  };
-
-  db.exams.unshift(ex);
-
-  saveDB(db);
-
-  logEvent(
-    `Created examination "${ex.title}" with room ${ex.roomCode}`
-  );
-
-  const form =
-    getElement('examForm');
-
-  if (form) {
-    form.reset();
-  }
-
-  /*
-   * Reset negative marking safely.
-   */
-  const negative =
-    getElement('negative');
-
-  const negativeMarks =
-    getElement('negativeMarks');
-
-  if (negative) {
-    negative.checked = false;
-  }
-
-  if (negativeMarks) {
-    negativeMarks.disabled = true;
-    negativeMarks.value = '0';
-  }
-
-  renderExaminerDashboard();
-
-  showRoomCreated(ex);
 }
 
 
@@ -2154,6 +2088,11 @@ function saveQuestion(e) {
    * Do not allow changing questions after
    * the teacher has started the exam.
    */
+  if (Array.isArray(ex.allowedQuestionTypes) && ex.allowedQuestionTypes.length > 0 && !ex.allowedQuestionTypes.includes(type)) {
+    alert(`The ${type.toUpperCase()} question type was not selected for this examination.`);
+    return;
+  }
+
   if (ex.startedAt) {
 
     alert(
@@ -4985,6 +4924,9 @@ window.addEventListener(
    GLOBAL EXPORTS
    ========================================================= */
 
+window.showExamoraToast =
+  showExamoraToast;
+
 window.toggleTheme =
   toggleTheme;
 
@@ -5038,624 +4980,3 @@ window.openAdminPortal =
 
 window.isAdminUser =
   isAdminUser;
-/* =========================================================
-   EXAMORA TOAST NOTIFICATION SYSTEM
-   ========================================================= */
-
-function showExamoraToast(
-  message,
-  type = 'info',
-  title = ''
-) {
-
-  let container =
-    document.querySelector(
-      '.examora-toast-container'
-    );
-
-  if (!container) {
-
-    container =
-      document.createElement('div');
-
-    container.className =
-      'examora-toast-container';
-
-    document.body.appendChild(
-      container
-    );
-  }
-
-  const toast =
-    document.createElement('div');
-
-  const validTypes = [
-    'success',
-    'error',
-    'warning',
-    'info'
-  ];
-
-  if (!validTypes.includes(type)) {
-    type = 'info';
-  }
-
-  toast.className =
-    `examora-toast ${type}`;
-
-  const icons = {
-    success: '✓',
-    error: '!',
-    warning: '!',
-    info: 'i'
-  };
-
-  const titles = {
-    success: 'Success',
-    error: 'Error',
-    warning: 'Warning',
-    info: 'Notice'
-  };
-
-  toast.innerHTML = `
-    <div class="examora-toast-icon">
-      ${icons[type]}
-    </div>
-
-    <div class="examora-toast-content">
-
-      <span class="examora-toast-title">
-        ${esc(
-          title ||
-          titles[type]
-        )}
-      </span>
-
-      <span class="examora-toast-message">
-        ${esc(message)}
-      </span>
-
-    </div>
-
-    <button
-      class="examora-toast-close"
-      type="button"
-      aria-label="Close notification"
-    >
-      ×
-    </button>
-  `;
-
-  container.appendChild(toast);
-
-  const closeBtn =
-    toast.querySelector(
-      '.examora-toast-close'
-    );
-
-  function removeToast() {
-
-    if (!toast.isConnected) {
-      return;
-    }
-
-    toast.classList.add('hide');
-
-    setTimeout(() => {
-
-      if (toast.isConnected) {
-        toast.remove();
-      }
-
-    }, 220);
-  }
-
-  closeBtn.addEventListener(
-    'click',
-    removeToast
-  );
-
-  setTimeout(
-    removeToast,
-    3500
-  );
-}
-
-
-/* =========================================================
-   REPLACE BROWSER ALERT WITH EXAMORA TOAST
-   ========================================================= */
-
-window.examoraAlert =
-  function (
-    message,
-    type = 'info',
-    title = ''
-  ) {
-
-    showExamoraToast(
-      message,
-      type,
-      title
-    );
-  };
-
-
-/* =========================================================
-   UPDATED START EXAM
-   ========================================================= */
-
-function startExam(examId) {
-
-  const db = getDB();
-
-  const exam =
-    db.exams.find(
-      exam => exam.id === examId
-    );
-
-  if (!exam) {
-
-    showExamoraToast(
-      'The examination could not be found.',
-      'error',
-      'Exam Not Found'
-    );
-
-    return;
-  }
-
-  if (exam.startedAt) {
-
-    showExamoraToast(
-      'This examination has already started.',
-      'warning',
-      'Already Started'
-    );
-
-    return;
-  }
-
-  const questionIds =
-    Array.isArray(
-      exam.questionIds
-    )
-      ? exam.questionIds
-      : [];
-
-  if (questionIds.length === 0) {
-
-    showExamoraToast(
-      'Please add at least one question before starting the examination.',
-      'warning',
-      'Questions Required'
-    );
-
-    return;
-  }
-
-  const duration =
-    Number(exam.duration);
-
-  if (
-    !Number.isFinite(duration) ||
-    duration <= 0
-  ) {
-
-    showExamoraToast(
-      'The examination duration is invalid.',
-      'error',
-      'Invalid Duration'
-    );
-
-    return;
-  }
-
-  const validQuestions =
-    questionIds
-      .map(
-        id =>
-          db.questions.find(
-            q => q.id === id
-          )
-      )
-      .filter(Boolean);
-
-  if (
-    validQuestions.length !==
-    questionIds.length
-  ) {
-
-    showExamoraToast(
-      'Some examination questions could not be found.',
-      'error',
-      'Question Error'
-    );
-
-    return;
-  }
-
-  const confirmed =
-    window.confirm(
-      `Start "${exam.title}" now?\n\n` +
-      `${questionIds.length} question(s)\n` +
-      `Duration: ${duration} minute(s)\n\n` +
-      `The examination timer will start immediately.`
-    );
-
-  if (!confirmed) {
-    return;
-  }
-
-  const startTime =
-    new Date().toISOString();
-
-  exam.startedAt =
-    startTime;
-
-  exam.status =
-    'active';
-
-  exam.startedBy =
-    db.user?.email ||
-    'examiner@example.com';
-
-  exam.startedQuestionCount =
-    questionIds.length;
-
-  saveDB(db);
-
-  logEvent(
-    `Started examination "${exam.title}" with room ${exam.roomCode}`
-  );
-
-  showExamoraToast(
-    `Exam "${exam.title}" has started successfully.`,
-    'success',
-    'Exam Started'
-  );
-
-  if (
-    typeof renderExaminerDashboard ===
-    'function'
-  ) {
-    renderExaminerDashboard();
-  }
-
-  if (
-    typeof closeQuestionModal ===
-    'function'
-  ) {
-    closeQuestionModal();
-  }
-}
-
-
-/* =========================================================
-   UPDATED JOIN EXAM
-   ========================================================= */
-
-function joinExam(e) {
-
-  if (e) {
-    e.preventDefault();
-  }
-
-  const db = getDB();
-
-  const roomCodeElement =
-    getElement('roomCode');
-
-  const roomPasswordElement =
-    getElement('roomPassword');
-
-  const message =
-    getElement('joinMessage');
-
-  const roomCode =
-    String(
-      roomCodeElement?.value || ''
-    )
-      .trim()
-      .toUpperCase();
-
-  const roomPassword =
-    String(
-      roomPasswordElement?.value || ''
-    )
-      .trim();
-
-  if (!roomCode || !roomPassword) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice"
-          style="
-            background:#fff5df;
-            color:#9a6507;
-          "
-        >
-          Please enter both the
-          room code and room password.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'Please enter both the room code and room password.',
-      'warning',
-      'Missing Details'
-    );
-
-    return false;
-  }
-
-  const exam =
-    db.exams.find(
-      item =>
-        String(
-          item.roomCode || ''
-        )
-          .trim()
-          .toUpperCase() ===
-        roomCode
-    );
-
-  if (!exam) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice"
-          style="
-            background:#fff0f1;
-            color:#a73542;
-          "
-        >
-          No examination with this
-          room code was found on
-          this browser.
-          <br><br>
-          If the examiner and student
-          are using different devices,
-          localStorage cannot share
-          the examination data.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'No examination with this room code was found on this device.',
-      'error',
-      'Room Not Found'
-    );
-
-    return false;
-  }
-
-  if (
-    String(
-      exam.roomPassword || ''
-    ).trim() !== roomPassword
-  ) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice"
-          style="
-            background:#fff0f1;
-            color:#a73542;
-          "
-        >
-          The room password is
-          incorrect.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'The room password is incorrect.',
-      'error',
-      'Incorrect Password'
-    );
-
-    return false;
-  }
-
-  const status =
-    formatStatus(exam);
-
-  if (
-    status === 'waiting' ||
-    status === 'ready'
-  ) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice">
-          The examiner has not
-          started this examination yet.
-          <br><br>
-          Please wait until the
-          examiner clicks
-          <b>Start Exam</b>.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'The examiner has not started the examination yet.',
-      'warning',
-      'Exam Not Started'
-    );
-
-    return false;
-  }
-
-  if (status === 'completed') {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice"
-          style="
-            background:#fff0f1;
-            color:#a73542;
-          "
-        >
-          This examination has
-          already ended.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'This examination has already ended.',
-      'error',
-      'Exam Ended'
-    );
-
-    return false;
-  }
-
-  const questionIds =
-    Array.isArray(
-      exam.questionIds
-    )
-      ? exam.questionIds
-      : [];
-
-  if (questionIds.length === 0) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice"
-          style="
-            background:#fff5df;
-            color:#9a6507;
-          "
-        >
-          This examination does not
-          contain any questions.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'This examination does not contain any questions.',
-      'warning',
-      'No Questions'
-    );
-
-    return false;
-  }
-
-  const validQuestions =
-    questionIds
-      .map(
-        id =>
-          db.questions.find(
-            q => q.id === id
-          )
-      )
-      .filter(Boolean);
-
-  if (!validQuestions.length) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice"
-          style="
-            background:#fff0f1;
-            color:#a73542;
-          "
-        >
-          Examination questions
-          could not be found.
-        </div>
-      `;
-    }
-
-    showExamoraToast(
-      'The examination questions could not be found.',
-      'error',
-      'Question Error'
-    );
-
-    return false;
-  }
-
-  /*
-   * Save the examination
-   * for the live exam page.
-   */
-
-  sessionStorage.setItem(
-    'examora_current_exam',
-    exam.id
-  );
-
-  sessionStorage.setItem(
-    'examora_student',
-    'Demo Student'
-  );
-
-  sessionStorage.setItem(
-    'examora_student_email',
-    'student@example.com'
-  );
-
-  sessionStorage.setItem(
-    'examora_join_time',
-    String(Date.now())
-  );
-
-  sessionStorage.removeItem(
-    'examora_answers'
-  );
-
-  sessionStorage.removeItem(
-    'examora_reviews'
-  );
-
-  sessionStorage.removeItem(
-    'examora_question_index'
-  );
-
-  showExamoraToast(
-    'Entering the examination...',
-    'success',
-    'Exam Ready'
-  );
-
-  setTimeout(() => {
-
-    location.href =
-      'exam.html';
-
-  }, 350);
-
-  return true;
-}
-
-
-/* =========================================================
-   UPDATED GLOBAL EXPORTS
-   ========================================================= */
-
-window.showExamoraToast =
-  showExamoraToast;
-
-window.examoraAlert =
-  window.examoraAlert;
-
-window.startExam =
-  startExam;
-
-window.joinExam =
-  joinExam;
