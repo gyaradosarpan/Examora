@@ -19,18 +19,19 @@ function seedDB() {
 
 function getDB() {
   try {
-    const data = JSON.parse(
-      localStorage.getItem(DB_KEY)
-    );
+    const raw = localStorage.getItem(DB_KEY);
 
-    if (!data) {
+    if (!raw) {
       return seedDB();
     }
+
+    const data = JSON.parse(raw);
 
     data.exams ||= [];
     data.questions ||= [];
     data.attempts ||= [];
     data.logs ||= [];
+
     data.user ||= {
       name: 'Demo Examiner',
       email: 'examiner@example.com'
@@ -38,7 +39,8 @@ function getDB() {
 
     return data;
 
-  } catch (e) {
+  } catch (error) {
+    console.error('Database read error:', error);
     return seedDB();
   }
 }
@@ -68,16 +70,16 @@ function logEvent(text) {
    SECURITY / HELPERS
    ========================================================= */
 
-function esc(s) {
-  return String(s ?? '').replace(
+function esc(value) {
+  return String(value ?? '').replace(
     /[&<>'"]/g,
-    m => ({
+    char => ({
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       "'": '&#39;',
       '"': '&quot;'
-    }[m])
+    }[char])
   );
 }
 
@@ -90,7 +92,7 @@ function uid(prefix = 'id') {
       .slice(2, 9) +
     Date.now()
       .toString(36)
-      .slice(-4)
+      .slice(-5)
   );
 }
 
@@ -110,6 +112,10 @@ function password() {
   );
 }
 
+function getElement(id) {
+  return document.getElementById(id);
+}
+
 
 /* =========================================================
    THEME
@@ -126,9 +132,7 @@ function toggleTheme() {
 
 function restoreTheme() {
   if (
-    localStorage.getItem(
-      'examora_dark'
-    ) === 'true'
+    localStorage.getItem('examora_dark') === 'true'
   ) {
     document.body.classList.add('dark');
   }
@@ -148,9 +152,7 @@ function setupNav() {
       button.addEventListener(
         'click',
         () => {
-          showView(
-            button.dataset.view
-          );
+          showView(button.dataset.view);
         }
       );
 
@@ -165,9 +167,7 @@ function setupNav() {
       button.addEventListener(
         'click',
         () => {
-          showView(
-            button.dataset.view
-          );
+          showView(button.dataset.view);
         }
       );
 
@@ -178,14 +178,12 @@ function setupNav() {
 
 function showView(id) {
 
+  if (!id) return;
+
   document
     .querySelectorAll('.view')
     .forEach(view => {
-
-      view.classList.remove(
-        'active'
-      );
-
+      view.classList.remove('active');
     });
 
   const element =
@@ -194,9 +192,7 @@ function showView(id) {
     );
 
   if (element) {
-    element.classList.add(
-      'active'
-    );
+    element.classList.add('active');
   }
 
   document
@@ -227,13 +223,11 @@ function showView(id) {
     window.location.hash !==
     '#' + id
   ) {
-
     history.replaceState(
       null,
       '',
       '#' + id
     );
-
   }
 
   renderCurrentView(id);
@@ -241,28 +235,34 @@ function showView(id) {
 
 function renderCurrentView(id) {
 
-  if (id === 'dashboard') {
-    renderExaminerDashboard();
-  }
+  switch (id) {
 
-  if (id === 'questions') {
-    renderQuestionBank();
-  }
+    case 'dashboard':
+      renderExaminerDashboard();
+      break;
 
-  if (id === 'results') {
-    renderResults();
-  }
+    case 'questions':
+      renderQuestionBank();
+      break;
 
-  if (id === 'audit') {
-    renderAudit();
-  }
+    case 'results':
+      renderResults();
+      break;
 
-  if (id === 'student-dashboard') {
-    renderStudentDashboard();
-  }
+    case 'audit':
+      renderAudit();
+      break;
 
-  if (id === 'history') {
-    renderStudentHistory();
+    case 'student-dashboard':
+      renderStudentDashboard();
+      break;
+
+    case 'history':
+      renderStudentHistory();
+      break;
+
+    default:
+      break;
   }
 }
 
@@ -271,7 +271,57 @@ function renderCurrentView(id) {
    EXAM STATUS
    ========================================================= */
 
+/*
+   IMPORTANT NEW SYSTEM
+
+   An exam now has:
+
+   status:
+      waiting
+      active
+      completed
+
+   startedAt:
+      actual time when teacher starts exam
+
+   scheduled date/startTime are still kept for
+   displaying the planned schedule.
+
+   TIMER IS BASED ON startedAt.
+*/
+
 function getExamStartTime(exam) {
+
+  if (!exam) {
+    return NaN;
+  }
+
+  /*
+   * Once teacher starts the exam,
+   * startedAt becomes the real start time.
+   */
+  if (exam.startedAt) {
+
+    const realStart =
+      new Date(
+        exam.startedAt
+      ).getTime();
+
+    if (
+      Number.isFinite(realStart)
+    ) {
+      return realStart;
+    }
+  }
+
+  /*
+   * Before teacher starts the exam,
+   * do NOT treat scheduled start as live.
+   */
+  return NaN;
+}
+
+function getScheduledStartTime(exam) {
 
   if (
     !exam ||
@@ -302,32 +352,78 @@ function getExamEndTime(exam) {
   );
 }
 
-function formatStatus(exam) {
+function isExamStarted(exam) {
+  return !!(
+    exam &&
+    exam.startedAt
+  );
+}
 
-  const now = Date.now();
+function isExamCompleted(exam) {
 
-  const start =
-    getExamStartTime(exam);
+  if (!exam) {
+    return false;
+  }
+
+  if (!exam.startedAt) {
+    return false;
+  }
 
   const end =
     getExamEndTime(exam);
 
-  if (
-    Number.isNaN(start) ||
-    Number.isNaN(end)
-  ) {
+  if (Number.isNaN(end)) {
+    return false;
+  }
+
+  return Date.now() >= end;
+}
+
+function formatStatus(exam) {
+
+  if (!exam) {
     return 'upcoming';
   }
 
-  if (now < start) {
-    return 'upcoming';
+  /*
+   * No startedAt means teacher has not
+   * started the examination yet.
+   */
+  if (!exam.startedAt) {
+
+    if (
+      exam.questionIds &&
+      exam.questionIds.length > 0
+    ) {
+      return 'ready';
+    }
+
+    return 'waiting';
   }
 
-  if (now <= end) {
-    return 'active';
+  if (isExamCompleted(exam)) {
+    return 'completed';
   }
 
-  return 'completed';
+  return 'active';
+}
+
+
+/* =========================================================
+   EXAM STATUS LABEL
+   ========================================================= */
+
+function statusLabel(status) {
+
+  const labels = {
+    waiting: 'Waiting for questions',
+    ready: 'Ready to start',
+    active: 'Live',
+    completed: 'Completed',
+    upcoming: 'Upcoming'
+  };
+
+  return labels[status] || status;
 }
 
 
@@ -342,45 +438,17 @@ function initExaminer() {
   const db = getDB();
 
   const examinerName =
-    document.getElementById(
-      'examinerName'
-    );
+    getElement('examinerName');
 
   if (examinerName) {
     examinerName.textContent =
       db.user.name;
   }
 
-  const negative =
-    document.getElementById(
-      'negative'
-    );
-
-  if (negative) {
-
-    negative.addEventListener(
-      'change',
-      e => {
-
-        const input =
-          document.getElementById(
-            'negativeMarks'
-          );
-
-        if (input) {
-          input.disabled =
-            !e.target.checked;
-        }
-
-      }
-    );
-
-  }
+  setupNegativeMarking();
 
   const examForm =
-    document.getElementById(
-      'examForm'
-    );
+    getElement('examForm');
 
   if (examForm) {
 
@@ -395,11 +463,78 @@ function initExaminer() {
 
   if (location.hash) {
 
-    showView(
-      location.hash.slice(1)
-    );
+    const hash =
+      location.hash.slice(1);
+
+    if (
+      document.getElementById(
+        'view-' + hash
+      )
+    ) {
+      showView(hash);
+    }
 
   }
+}
+
+
+/* =========================================================
+   NEGATIVE MARKING
+   ========================================================= */
+
+function setupNegativeMarking() {
+
+  const negative =
+    getElement('negative');
+
+  const negativeMarks =
+    getElement('negativeMarks');
+
+  if (!negative) {
+    return;
+  }
+
+  function updateNegativeState() {
+
+    if (!negativeMarks) {
+      return;
+    }
+
+    negativeMarks.disabled =
+      !negative.checked;
+
+    /*
+     * Keep the input visually/state-wise
+     * synchronized.
+     */
+    if (!negative.checked) {
+
+      negativeMarks.value =
+        negativeMarks.value || '0';
+
+    }
+
+  }
+
+  /*
+   * Avoid duplicate listeners if this function
+   * is called again.
+   */
+  if (
+    negative.dataset.listenerAttached !==
+    'true'
+  ) {
+
+    negative.addEventListener(
+      'change',
+      updateNegativeState
+    );
+
+    negative.dataset.listenerAttached =
+      'true';
+  }
+
+  updateNegativeState();
 }
 
 
@@ -413,105 +548,52 @@ function createExam(e) {
 
   const db = getDB();
 
+  const title =
+    getElement('title')?.value.trim();
+
+  const subject =
+    getElement('subject')?.value.trim();
+
+  const date =
+    getElement('date')?.value;
+
+  const startTime =
+    getElement('startTime')?.value;
+
+  const duration =
+    Number(
+      getElement('duration')?.value
+    );
+
+  const passing =
+    Number(
+      getElement('passing')?.value
+    );
+
+  const maxStudentsValue =
+    getElement('maxStudents')?.value;
+
+  const department =
+    getElement('department')?.value.trim();
+
+  const instructions =
+    getElement('instructions')?.value.trim();
+
   const negativeEnabled =
-    document.getElementById(
-      'negative'
-    )?.checked || false;
+    getElement('negative')?.checked === true;
 
-  const ex = {
-
-    id: uid('exam'),
-
-    title:
-      document
-        .getElementById('title')
-        .value
-        .trim(),
-
-    subject:
-      document
-        .getElementById('subject')
-        .value
-        .trim(),
-
-    date:
-      document
-        .getElementById('date')
-        .value,
-
-    startTime:
-      document
-        .getElementById('startTime')
-        .value,
-
-    duration:
-      Number(
-        document
-          .getElementById('duration')
-          .value
-      ),
-
-    passing:
-      Number(
-        document
-          .getElementById('passing')
-          .value
-      ),
-
-    maxStudents:
-      document
-        .getElementById('maxStudents')
-        .value
-        ? Number(
-            document
-              .getElementById('maxStudents')
-              .value
-          )
-        : null,
-
-    department:
-      document
-        .getElementById('department')
-        .value
-        .trim(),
-
-    instructions:
-      document
-        .getElementById('instructions')
-        .value
-        .trim(),
-
-    negative:
-      negativeEnabled,
-
-    negativeMarks:
-      negativeEnabled
-        ? Number(
-            document
-              .getElementById(
-                'negativeMarks'
-              )
-              .value
-          ) || 0
-        : 0,
-
-    roomCode: code(),
-
-    roomPassword: password(),
-
-    questionIds: [],
-
-    created:
-      new Date().toISOString()
-
-  };
+  const negativeMarksInput =
+    Number(
+      getElement('negativeMarks')?.value
+    );
 
   if (
-    !ex.title ||
-    !ex.subject ||
-    !ex.date ||
-    !ex.startTime ||
-    !ex.duration
+    !title ||
+    !subject ||
+    !date ||
+    !startTime ||
+    !Number.isFinite(duration) ||
+    duration <= 0
   ) {
 
     alert(
@@ -520,6 +602,72 @@ function createExam(e) {
 
     return;
   }
+
+  const ex = {
+
+    id: uid('exam'),
+
+    title,
+
+    subject,
+
+    date,
+
+    startTime,
+
+    duration,
+
+    passing:
+      Number.isFinite(passing)
+        ? passing
+        : 0,
+
+    maxStudents:
+      maxStudentsValue
+        ? Number(maxStudentsValue)
+        : null,
+
+    department,
+
+    instructions,
+
+    negative:
+      negativeEnabled,
+
+    negativeMarks:
+      negativeEnabled &&
+      Number.isFinite(
+        negativeMarksInput
+      )
+        ? Math.max(
+            0,
+            negativeMarksInput
+          )
+        : 0,
+
+    roomCode:
+      code(),
+
+    roomPassword:
+      password(),
+
+    questionIds: [],
+
+    /*
+     * NEW:
+     * Exam is NOT started when created.
+     */
+    startedAt: null,
+
+    /*
+     * Helps make the state explicit.
+     */
+    status: 'waiting',
+
+    created:
+      new Date().toISOString()
+
+  };
 
   db.exams.unshift(ex);
 
@@ -530,22 +678,28 @@ function createExam(e) {
   );
 
   const form =
-    document.getElementById(
-      'examForm'
-    );
+    getElement('examForm');
 
   if (form) {
     form.reset();
   }
 
+  /*
+   * Reset negative marking safely.
+   */
+  const negative =
+    getElement('negative');
+
   const negativeMarks =
-    document.getElementById(
-      'negativeMarks'
-    );
+    getElement('negativeMarks');
+
+  if (negative) {
+    negative.checked = false;
+  }
 
   if (negativeMarks) {
-    negativeMarks.disabled =
-      true;
+    negativeMarks.disabled = true;
+    negativeMarks.value = '0';
   }
 
   renderExaminerDashboard();
@@ -561,15 +715,11 @@ function createExam(e) {
 function showRoomCreated(ex) {
 
   const modal =
-    document.getElementById(
-      'questionModal'
-    );
+    getElement('questionModal');
 
   if (!modal) return;
 
-  modal.classList.remove(
-    'hidden'
-  );
+  modal.classList.remove('hidden');
 
   modal.innerHTML = `
 
@@ -577,6 +727,7 @@ function showRoomCreated(ex) {
 
       <button
         class="modal-close"
+        type="button"
         onclick="closeQuestionModal()"
       >
         ×
@@ -591,30 +742,32 @@ function showRoomCreated(ex) {
       </h2>
 
       <div class="notice">
-        Share these credentials with students.
-        The room code is copyable.
-        Keep the password private.
+
+        Room created successfully.
+
+        <br><br>
+
+        <b>
+          The examination timer has NOT started.
+        </b>
+
+        Add all questions first, then use
+        <b>Start Exam</b> from the dashboard.
+
       </div>
 
-      <div
-        class="section-card"
-        style="margin:0 0 14px"
-      >
+      <div class="section-card">
 
         <div class="exam-meta">
           ROOM CODE
         </div>
 
-        <div
-          style="
-            font:800 28px 'Plus Jakarta Sans';
-            margin:7px 0
-          "
-        >
+        <div class="room-credential-value">
           ${esc(ex.roomCode)}
         </div>
 
         <button
+          type="button"
           class="btn btn-primary"
           onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
         >
@@ -623,44 +776,52 @@ function showRoomCreated(ex) {
 
       </div>
 
-      <div
-        class="section-card"
-        style="margin:0"
-      >
+      <div class="section-card">
 
         <div class="exam-meta">
           ROOM PASSWORD
         </div>
 
-        <div
-          style="
-            font:800 28px monospace;
-            margin:7px 0;
-            letter-spacing:.08em
-          "
-        >
+        <div class="room-credential-value password-display">
           ${esc(ex.roomPassword)}
         </div>
 
         <div class="security-note">
-          Password is display-only.
-          Keep it private.
+          Keep this password private.
+        </div>
+
+      </div>
+
+      <div class="section-card">
+
+        <div class="exam-meta">
+          QUESTIONS
+        </div>
+
+        <div class="room-credential-value">
+          0
+        </div>
+
+        <div class="security-note">
+          Add questions before starting the exam.
         </div>
 
       </div>
 
       <button
+        type="button"
         class="btn btn-secondary full"
         style="margin-top:14px"
         onclick="
           closeQuestionModal();
-          showView('dashboard')
+          showView('questions');
         "
       >
-        Continue to Dashboard
+        Add Questions
       </button>
 
     </div>
+
   `;
 }
 
@@ -674,7 +835,7 @@ function copyRoomCode(
   button = null
 ) {
 
-  const copy = () => {
+  const copySuccess = () => {
 
     logEvent(
       `Copied room code ${value}`
@@ -706,16 +867,18 @@ function copyRoomCode(
 
     navigator.clipboard
       .writeText(value)
-      .then(copy)
+      .then(copySuccess)
       .catch(() => {
+
         fallbackCopy(value);
-        copy();
+        copySuccess();
+
       });
 
   } else {
 
     fallbackCopy(value);
-    copy();
+    copySuccess();
 
   }
 }
@@ -723,16 +886,15 @@ function copyRoomCode(
 function fallbackCopy(text) {
 
   const textarea =
-    document.createElement(
-      'textarea'
-    );
+    document.createElement('textarea');
 
   textarea.value = text;
 
   textarea.style.position =
     'fixed';
 
-  textarea.style.opacity = '0';
+  textarea.style.opacity =
+    '0';
 
   document.body.appendChild(
     textarea
@@ -741,12 +903,107 @@ function fallbackCopy(text) {
   textarea.select();
 
   try {
-    document.execCommand(
-      'copy'
+    document.execCommand('copy');
+  } catch (error) {
+    console.error(
+      'Copy failed:',
+      error
     );
-  } catch (e) {}
+  }
 
   textarea.remove();
+}
+
+
+/* =========================================================
+   START EXAM
+   ========================================================= */
+
+/*
+   THIS IS THE MOST IMPORTANT NEW FUNCTION.
+
+   Teacher creates room
+          ↓
+   Adds questions
+          ↓
+   Clicks Start Exam
+          ↓
+   startedAt is saved
+          ↓
+   Timer starts
+*/
+
+function startExam(examId) {
+
+  const db = getDB();
+
+  const exam =
+    db.exams.find(
+      x => x.id === examId
+    );
+
+  if (!exam) {
+
+    alert(
+      'Examination not found.'
+    );
+
+    return;
+  }
+
+  if (exam.startedAt) {
+
+    alert(
+      'This examination has already started.'
+    );
+
+    return;
+  }
+
+  const questionCount =
+    exam.questionIds?.length || 0;
+
+  if (questionCount === 0) {
+
+    alert(
+      'You cannot start the examination yet.\n\nPlease add all questions first.'
+    );
+
+    return;
+  }
+
+  const confirmation =
+    confirm(
+      `Start "${exam.title}" now?\n\n` +
+      `${questionCount} question(s) are ready.\n` +
+      `The ${exam.duration}-minute timer will start immediately.\n\n` +
+      `Students joining later will receive only the remaining time.`
+    );
+
+  if (!confirmation) {
+    return;
+  }
+
+  /*
+   * ACTUAL START TIME
+   */
+  exam.startedAt =
+    new Date().toISOString();
+
+  exam.status =
+    'active';
+
+  saveDB(db);
+
+  logEvent(
+    `Started examination "${exam.title}" with room ${exam.roomCode}`
+  );
+
+  renderExaminerDashboard();
+
+  alert(
+    `Exam "${exam.title}" has started.\n\nThe ${exam.duration}-minute timer is now running.`
+  );
 }
 
 
@@ -758,6 +1015,27 @@ function renderExaminerDashboard() {
 
   const db = getDB();
 
+  /*
+   * Automatically mark exams completed
+   * when their real timer has expired.
+   */
+  db.exams.forEach(exam => {
+
+    if (
+      exam.startedAt &&
+      isExamCompleted(exam) &&
+      exam.status !== 'completed'
+    ) {
+
+      exam.status =
+        'completed';
+
+    }
+
+  });
+
+  saveDB(db);
+
   const active =
     db.exams.filter(
       x =>
@@ -767,9 +1045,17 @@ function renderExaminerDashboard() {
 
   const upcoming =
     db.exams.filter(
-      x =>
-        formatStatus(x) ===
-        'upcoming'
+      x => {
+
+        const status =
+          formatStatus(x);
+
+        return (
+          status === 'waiting' ||
+          status === 'ready'
+        );
+
+      }
     ).length;
 
   const completed =
@@ -787,9 +1073,7 @@ function renderExaminerDashboard() {
     ).size;
 
   const activeCount =
-    document.getElementById(
-      'activeCount'
-    );
+    getElement('activeCount');
 
   if (activeCount) {
     activeCount.textContent =
@@ -797,9 +1081,7 @@ function renderExaminerDashboard() {
   }
 
   const upcomingCount =
-    document.getElementById(
-      'upcomingCount'
-    );
+    getElement('upcomingCount');
 
   if (upcomingCount) {
     upcomingCount.textContent =
@@ -807,9 +1089,7 @@ function renderExaminerDashboard() {
   }
 
   const completedCount =
-    document.getElementById(
-      'completedCount'
-    );
+    getElement('completedCount');
 
   if (completedCount) {
     completedCount.textContent =
@@ -817,9 +1097,7 @@ function renderExaminerDashboard() {
   }
 
   const studentCount =
-    document.getElementById(
-      'studentCount'
-    );
+    getElement('studentCount');
 
   if (studentCount) {
     studentCount.textContent =
@@ -827,21 +1105,18 @@ function renderExaminerDashboard() {
   }
 
   const box =
-    document.getElementById(
-      'examList'
-    );
+    getElement('examList');
 
   if (!box) return;
 
   if (!db.exams.length) {
 
-    box.innerHTML =
-      `
-        <div class="empty">
-          No examinations yet.
-          Create your first exam room.
-        </div>
-      `;
+    box.innerHTML = `
+      <div class="empty">
+        No examinations yet.
+        Create your first exam room.
+      </div>
+    `;
 
     return;
   }
@@ -852,6 +1127,78 @@ function renderExaminerDashboard() {
 
         const status =
           formatStatus(ex);
+
+        const qCount =
+          ex.questionIds?.length || 0;
+
+        let action = '';
+
+        if (
+          status === 'waiting' ||
+          status === 'ready'
+        ) {
+
+          action = `
+
+            <button
+              type="button"
+              class="text-btn"
+              onclick="showView('questions')"
+            >
+              Add Questions
+            </button>
+
+            ${
+              qCount > 0
+                ? `
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="startExam('${ex.id}')"
+                  >
+                    Start Exam
+                  </button>
+                `
+                : ''
+            }
+
+          `;
+
+        }
+
+        else if (
+          status === 'active'
+        ) {
+
+          const end =
+            getExamEndTime(ex);
+
+          const remaining =
+            Math.max(
+              0,
+              end - Date.now()
+            );
+
+          action = `
+
+            <span class="exam-meta">
+              Time remaining:
+              ${formatRemainingTime(remaining)}
+            </span>
+
+          `;
+
+        }
+
+        else {
+
+          action = `
+            <span class="exam-meta">
+              Exam ended
+            </span>
+          `;
+
+        }
 
         return `
 
@@ -864,10 +1211,20 @@ function renderExaminerDashboard() {
               </b>
 
               <div class="exam-meta">
+
                 ${esc(ex.subject)}
-                • ${esc(ex.date)}
+                •
+                ${esc(ex.date)}
+                •
                 ${esc(ex.startTime)}
-                • Room ${esc(ex.roomCode)}
+
+                <br>
+
+                Room:
+                <b>
+                  ${esc(ex.roomCode)}
+                </b>
+
               </div>
 
             </div>
@@ -875,7 +1232,7 @@ function renderExaminerDashboard() {
             <span
               class="badge ${status}"
             >
-              ${status}
+              ${statusLabel(status)}
             </span>
 
             <div class="room-secret">
@@ -891,35 +1248,29 @@ function renderExaminerDashboard() {
             </div>
 
             <span>
-              ${
-                ex.questionIds?.length ||
-                0
-              }
-              questions
+              ${qCount}
+              question${qCount === 1 ? '' : 's'}
             </span>
 
             <div class="room-actions">
 
               <button
+                type="button"
                 class="text-btn"
-                onclick="
-                  copyRoomCode(
-                    '${esc(ex.roomCode)}',
-                    this
-                  )
-                "
+                onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
               >
                 Copy code
               </button>
 
               <button
+                type="button"
                 class="text-btn"
-                onclick="
-                  viewRoom('${ex.id}')
-                "
+                onclick="viewRoom('${ex.id}')"
               >
                 View
               </button>
+
+              ${action}
 
             </div>
 
@@ -929,6 +1280,50 @@ function renderExaminerDashboard() {
 
       })
       .join('');
+}
+
+
+/* =========================================================
+   FORMAT REMAINING TIME
+   ========================================================= */
+
+function formatRemainingTime(milliseconds) {
+
+  const totalSeconds =
+    Math.max(
+      0,
+      Math.floor(
+        milliseconds / 1000
+      )
+    );
+
+  const hours =
+    Math.floor(
+      totalSeconds / 3600
+    );
+
+  const minutes =
+    Math.floor(
+      (totalSeconds % 3600) / 60
+    );
+
+  const seconds =
+    totalSeconds % 60;
+
+  if (hours > 0) {
+
+    return (
+      `${String(hours).padStart(2, '0')}:` +
+      `${String(minutes).padStart(2, '0')}:` +
+      `${String(seconds).padStart(2, '0')}`
+    );
+
+  }
+
+  return (
+    `${String(minutes).padStart(2, '0')}:` +
+    `${String(seconds).padStart(2, '0')}`
+  );
 }
 
 
@@ -953,19 +1348,17 @@ function viewRoom(id) {
     );
 
   const qCount =
-    ex.questionIds?.length ||
-    0;
+    ex.questionIds?.length || 0;
+
+  const status =
+    formatStatus(ex);
 
   const modal =
-    document.getElementById(
-      'questionModal'
-    );
+    getElement('questionModal');
 
   if (!modal) return;
 
-  modal.classList.remove(
-    'hidden'
-  );
+  modal.classList.remove('hidden');
 
   modal.innerHTML = `
 
@@ -973,6 +1366,7 @@ function viewRoom(id) {
 
       <button
         class="modal-close"
+        type="button"
         onclick="closeQuestionModal()"
       >
         ×
@@ -989,26 +1383,32 @@ function viewRoom(id) {
       <div class="section-card">
 
         <div class="exam-meta">
+          STATUS
+        </div>
+
+        <span class="badge ${status}">
+          ${statusLabel(status)}
+        </span>
+
+      </div>
+
+      <div class="section-card">
+
+        <div class="exam-meta">
           ROOM CODE
         </div>
 
-        <strong
-          style="font:800 26px monospace"
-        >
+        <strong class="room-credential-value">
           ${esc(ex.roomCode)}
         </strong>
 
         <br>
 
         <button
+          type="button"
           class="btn btn-primary"
           style="margin-top:10px"
-          onclick="
-            copyRoomCode(
-              '${esc(ex.roomCode)}',
-              this
-            )
-          "
+          onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
         >
           Copy Room Code
         </button>
@@ -1021,15 +1421,12 @@ function viewRoom(id) {
           ROOM PASSWORD
         </div>
 
-        <strong
-          style="font:800 26px monospace"
-        >
+        <strong class="room-credential-value password-display">
           ${esc(ex.roomPassword)}
         </strong>
 
         <div class="security-note">
-          Display only.
-          Password copy is disabled.
+          Keep this password private.
         </div>
 
       </div>
@@ -1049,14 +1446,59 @@ function viewRoom(id) {
         ${esc(ex.duration)}
         minutes
 
-        <br>
+        <br><br>
 
-        Status:
+        Exam status:
         <b>
-          ${formatStatus(ex)}
+          ${statusLabel(status)}
         </b>
 
+        ${
+          ex.startedAt
+            ? `
+              <br>
+              Started:
+              ${new Date(
+                ex.startedAt
+              ).toLocaleString()}
+            `
+            : ''
+        }
+
       </div>
+
+      ${
+        status === 'ready'
+          ? `
+            <button
+              type="button"
+              class="btn btn-primary full"
+              style="margin-top:14px"
+              onclick="startExam('${ex.id}')"
+            >
+              Start Exam
+            </button>
+          `
+          : ''
+      }
+
+      ${
+        status === 'waiting'
+          ? `
+            <button
+              type="button"
+              class="btn btn-secondary full"
+              style="margin-top:14px"
+              onclick="
+                closeQuestionModal();
+                showView('questions');
+              "
+            >
+              Add Questions
+            </button>
+          `
+          : ''
+      }
 
       <div
         style="
@@ -1067,6 +1509,7 @@ function viewRoom(id) {
       >
 
         <button
+          type="button"
           class="btn btn-secondary"
           style="flex:1"
           onclick="closeQuestionModal()"
@@ -1075,11 +1518,10 @@ function viewRoom(id) {
         </button>
 
         <button
+          type="button"
           class="btn btn-danger"
           style="flex:1"
-          onclick="
-            deleteExam('${ex.id}')
-          "
+          onclick="deleteExam('${ex.id}')"
         >
           Delete Exam
         </button>
@@ -1087,6 +1529,7 @@ function viewRoom(id) {
       </div>
 
     </div>
+
   `;
 }
 
@@ -1112,15 +1555,14 @@ function deleteExam(id) {
     ).length;
 
   const questionCount =
-    ex.questionIds?.length ||
-    0;
+    ex.questionIds?.length || 0;
 
   const message =
     `Delete the examination "${ex.title}"?\n\n` +
     `Room: ${ex.roomCode}\n` +
     `Questions: ${questionCount}\n` +
     `Student attempts: ${attempts}\n\n` +
-    `This will permanently delete the exam room and its questions/submissions.`;
+    `This will permanently delete the exam room, its questions and submissions.`;
 
   if (!confirm(message)) {
     return;
@@ -1175,15 +1617,11 @@ function openQuestionModal() {
   const db = getDB();
 
   const modal =
-    document.getElementById(
-      'questionModal'
-    );
+    getElement('questionModal');
 
   if (!modal) return;
 
-  modal.classList.remove(
-    'hidden'
-  );
+  modal.classList.remove('hidden');
 
   modal.innerHTML = `
 
@@ -1191,20 +1629,21 @@ function openQuestionModal() {
 
       <button
         class="modal-close"
+        type="button"
         onclick="closeQuestionModal()"
       >
         ×
       </button>
 
       <h2>
-        Add question
+        Add Question
       </h2>
 
       <form id="questionForm">
 
         <label>
 
-          Question type
+          Question Type
 
           <select id="qType">
 
@@ -1234,13 +1673,12 @@ function openQuestionModal() {
 
         <label>
 
-          Add to examination
+          Add to Examination
 
           <select id="qExam">
 
             ${
               db.exams.length
-
                 ? db.exams
                     .map(
                       ex => `
@@ -1252,6 +1690,11 @@ function openQuestionModal() {
                           —
                           Room
                           ${esc(ex.roomCode)}
+                          ${
+                            ex.startedAt
+                              ? ' — LIVE'
+                              : ''
+                          }
                         </option>
 
                       `
@@ -1259,11 +1702,9 @@ function openQuestionModal() {
                     .join('')
 
                 : `
-
                   <option value="">
                     Create an examination first
                   </option>
-
                 `
             }
 
@@ -1318,7 +1759,7 @@ function openQuestionModal() {
 
           <label>
 
-            Negative marks
+            Negative Marks
 
             <input
               id="qNegative"
@@ -1333,6 +1774,7 @@ function openQuestionModal() {
         </div>
 
         <button
+          type="submit"
           class="btn btn-primary full"
           ${
             db.exams.length
@@ -1346,12 +1788,11 @@ function openQuestionModal() {
       </form>
 
     </div>
+
   `;
 
   const type =
-    document.getElementById(
-      'qType'
-    );
+    getElement('qType');
 
   if (type) {
 
@@ -1363,9 +1804,7 @@ function openQuestionModal() {
   }
 
   const form =
-    document.getElementById(
-      'questionForm'
-    );
+    getElement('questionForm');
 
   if (form) {
 
@@ -1382,15 +1821,11 @@ function openQuestionModal() {
 function closeQuestionModal() {
 
   const modal =
-    document.getElementById(
-      'questionModal'
-    );
+    getElement('questionModal');
 
   if (!modal) return;
 
-  modal.classList.add(
-    'hidden'
-  );
+  modal.classList.add('hidden');
 
   modal.innerHTML = '';
 }
@@ -1403,21 +1838,15 @@ function closeQuestionModal() {
 function updateQuestionFields() {
 
   const type =
-    document.getElementById(
-      'qType'
-    )?.value;
+    getElement('qType')?.value;
 
   if (!type) return;
 
   const options =
-    document.getElementById(
-      'qOptions'
-    );
+    getElement('qOptions');
 
   const correctWrap =
-    document.getElementById(
-      'correctWrap'
-    );
+    getElement('correctWrap');
 
   if (!options || !correctWrap) {
     return;
@@ -1448,7 +1877,7 @@ function updateQuestionFields() {
     correctWrap.innerHTML = `
 
       <span class="field-title">
-        Correct answer
+        Correct Answer
       </span>
 
       <select
@@ -1494,7 +1923,7 @@ function updateQuestionFields() {
       >
 
         <b>
-          True / False question
+          True / False Question
         </b>
 
         <br>
@@ -1509,7 +1938,7 @@ function updateQuestionFields() {
     correctWrap.innerHTML = `
 
       <span class="field-title">
-        Correct answer
+        Correct Answer
       </span>
 
       <select
@@ -1543,7 +1972,7 @@ function updateQuestionFields() {
       >
 
         <b>
-          Numerical question
+          Numerical Question
         </b>
 
         <br>
@@ -1559,7 +1988,7 @@ function updateQuestionFields() {
     correctWrap.innerHTML = `
 
       <span class="field-title">
-        Expected numerical answer
+        Expected Numerical Answer
       </span>
 
       <input
@@ -1642,14 +2071,10 @@ function saveQuestion(e) {
   const db = getDB();
 
   const type =
-    document.getElementById(
-      'qType'
-    ).value;
+    getElement('qType')?.value;
 
   const examId =
-    document.getElementById(
-      'qExam'
-    )?.value;
+    getElement('qExam')?.value;
 
   if (!examId) {
 
@@ -1661,9 +2086,8 @@ function saveQuestion(e) {
   }
 
   const questionText =
-    document
-      .getElementById('qText')
-      .value
+    getElement('qText')
+      ?.value
       .trim();
 
   if (!questionText) {
@@ -1677,16 +2101,12 @@ function saveQuestion(e) {
 
   const marks =
     Number(
-      document.getElementById(
-        'qMarks'
-      ).value
+      getElement('qMarks')?.value
     );
 
   const negativeMarks =
     Number(
-      document.getElementById(
-        'qNegative'
-      ).value
+      getElement('qNegative')?.value
     ) || 0;
 
   if (
@@ -1701,10 +2121,50 @@ function saveQuestion(e) {
     return;
   }
 
-  const correctElement =
-    document.getElementById(
-      'correct'
+  if (
+    !Number.isFinite(
+      negativeMarks
+    ) ||
+    negativeMarks < 0
+  ) {
+
+    alert(
+      'Negative marks cannot be negative.'
     );
+
+    return;
+  }
+
+  const ex =
+    db.exams.find(
+      x => x.id === examId
+    );
+
+  if (!ex) {
+
+    alert(
+      'Selected examination was not found.'
+    );
+
+    return;
+  }
+
+  /*
+   * IMPORTANT:
+   * Do not allow changing questions after
+   * the teacher has started the exam.
+   */
+  if (ex.startedAt) {
+
+    alert(
+      'This examination has already started. You cannot add more questions now.'
+    );
+
+    return;
+  }
+
+  const correctElement =
+    getElement('correct');
 
   const correct =
     correctElement?.value
@@ -1764,24 +2224,24 @@ function saveQuestion(e) {
       type === 'mcq'
         ? {
             A:
-              document.getElementById(
-                'a'
-              ).value.trim(),
+              getElement('a')
+                ?.value
+                .trim() || '',
 
             B:
-              document.getElementById(
-                'b'
-              ).value.trim(),
+              getElement('b')
+                ?.value
+                .trim() || '',
 
             C:
-              document.getElementById(
-                'c'
-              ).value.trim(),
+              getElement('c')
+                ?.value
+                .trim() || '',
 
             D:
-              document.getElementById(
-                'd'
-              ).value.trim()
+              getElement('d')
+                ?.value
+                .trim() || ''
           }
         : null,
 
@@ -1791,27 +2251,37 @@ function saveQuestion(e) {
 
   };
 
-  db.questions.unshift(q);
-
-  const ex =
-    db.exams.find(
-      x => x.id === examId
-    );
-
-  if (!ex) {
+  if (
+    type === 'mcq' &&
+    (
+      !q.options.A ||
+      !q.options.B ||
+      !q.options.C ||
+      !q.options.D
+    )
+  ) {
 
     alert(
-      'Selected examination was not found.'
+      'Please fill all four MCQ options.'
     );
 
     return;
   }
+
+  db.questions.unshift(q);
 
   ex.questionIds ||= [];
 
   ex.questionIds.push(
     q.id
   );
+
+  /*
+   * If questions now exist,
+   * exam becomes READY.
+   */
+  ex.status =
+    'ready';
 
   saveDB(db);
 
@@ -1822,6 +2292,8 @@ function saveQuestion(e) {
   closeQuestionModal();
 
   renderQuestionBank();
+
+  renderExaminerDashboard();
 }
 
 
@@ -1834,9 +2306,7 @@ function renderQuestionBank() {
   const db = getDB();
 
   const box =
-    document.getElementById(
-      'questionBank'
-    );
+    getElement('questionBank');
 
   if (!box) return;
 
@@ -1885,10 +2355,20 @@ function renderQuestionBank() {
                   )}
 
                   •
+
                   ${q.marks}
                   mark(s)
 
                   •
+
+                  ${
+                    q.negativeMarks > 0
+                      ? `-${q.negativeMarks} negative`
+                      : 'No negative marking'
+                  }
+
+                  •
+
                   ${
                     q.manual
                       ? 'Manual teacher checking'
@@ -1941,9 +2421,7 @@ function renderResults() {
   const db = getDB();
 
   const box =
-    document.getElementById(
-      'resultsTable'
-    );
+    getElement('resultsTable');
 
   if (!box) return;
 
@@ -2062,10 +2540,9 @@ function renderResults() {
             </span>
 
             <button
+              type="button"
               class="text-btn"
-              onclick="
-                openGrading('${a.id}')
-              "
+              onclick="openGrading('${a.id}')"
             >
 
               ${
@@ -2091,16 +2568,13 @@ function renderResults() {
    OPEN GRADING
    ========================================================= */
 
-function openGrading(
-  attemptId
-) {
+function openGrading(attemptId) {
 
   const db = getDB();
 
   const attempt =
     db.attempts.find(
-      x =>
-        x.id === attemptId
+      x => x.id === attemptId
     );
 
   if (!attempt) return;
@@ -2117,9 +2591,7 @@ function openGrading(
   showView('results');
 
   const box =
-    document.getElementById(
-      'resultsTable'
-    );
+    getElement('resultsTable');
 
   if (!box) return;
 
@@ -2167,15 +2639,12 @@ function openGrading(
                 class="
                   attempt-card
                   ${
-                    x.id ===
-                    attemptId
+                    x.id === attemptId
                       ? 'selected'
                       : ''
                   }
                 "
-                onclick="
-                  openGrading('${x.id}')
-                "
+                onclick="openGrading('${x.id}')"
               >
 
                 <b>
@@ -2186,8 +2655,7 @@ function openGrading(
 
                 <span>
                   ${esc(
-                    xExam?.title ||
-                    ''
+                    xExam?.title || ''
                   )}
                 </span>
 
@@ -2289,19 +2757,17 @@ function openGrading(
         >
 
           <button
+            type="button"
             class="btn btn-secondary"
-            onclick="
-              renderResults()
-            "
+            onclick="renderResults()"
           >
             Back to results
           </button>
 
           <button
+            type="button"
             class="btn btn-primary"
-            onclick="
-              saveGrading('${attempt.id}')
-            "
+            onclick="saveGrading('${attempt.id}')"
           >
             Save Checked Result
           </button>
@@ -2387,11 +2853,13 @@ function renderAnswerReview(
             ${index + 1}
 
             •
+
             ${esc(
               q.type.toUpperCase()
             )}
 
             •
+
             ${q.marks}
             mark${q.marks == 1 ? '' : 's'}
 
@@ -2542,9 +3010,7 @@ function renderAnswerReview(
    SAVE GRADING
    ========================================================= */
 
-function saveGrading(
-  attemptId
-) {
+function saveGrading(attemptId) {
 
   const db = getDB();
 
@@ -2621,6 +3087,12 @@ function saveGrading(
       0
     );
 
+  attempt.score =
+    Math.max(
+      0,
+      attempt.score
+    );
+
   attempt.gradingStatus =
     'checked';
 
@@ -2646,9 +3118,7 @@ function renderAudit() {
   const db = getDB();
 
   const box =
-    document.getElementById(
-      'auditList'
-    );
+    getElement('auditList');
 
   if (!box) return;
 
@@ -2692,9 +3162,7 @@ function initStudent() {
   setupNav();
 
   const joinForm =
-    document.getElementById(
-      'joinForm'
-    );
+    getElement('joinForm');
 
   if (joinForm) {
 
@@ -2709,9 +3177,16 @@ function initStudent() {
 
   if (location.hash) {
 
-    showView(
-      location.hash.slice(1)
-    );
+    const hash =
+      location.hash.slice(1);
+
+    if (
+      document.getElementById(
+        'view-' + hash
+      )
+    ) {
+      showView(hash);
+    }
 
   }
 }
@@ -2726,9 +3201,7 @@ function renderStudentDashboard() {
   const db = getDB();
 
   const box =
-    document.getElementById(
-      'studentExamList'
-    );
+    getElement('studentExamList');
 
   if (box) {
 
@@ -2747,6 +3220,18 @@ function renderStudentDashboard() {
 
               const status =
                 formatStatus(exam);
+
+              const qCount =
+                exam.questionIds?.length ||
+                0;
+
+              /*
+               * Students should not see a
+               * waiting room as an active exam.
+               */
+              const joinDisabled =
+                status === 'waiting' ||
+                status === 'ready';
 
               return `
 
@@ -2769,6 +3254,7 @@ function renderStudentDashboard() {
                       •
                       ${esc(exam.date)}
 
+                      •
                       ${esc(
                         exam.startTime
                       )}
@@ -2780,7 +3266,7 @@ function renderStudentDashboard() {
                   <span
                     class="badge ${status}"
                   >
-                    ${status}
+                    ${statusLabel(status)}
                   </span>
 
                   <span>
@@ -2789,26 +3275,30 @@ function renderStudentDashboard() {
                   </span>
 
                   <span>
-                    ${
-                      exam.questionIds
-                        ?.length || 0
-                    }
-                    questions
+                    ${qCount}
+                    question${qCount === 1 ? '' : 's'}
                   </span>
 
-                  <button
-                    class="text-btn"
-                    onclick="
-                      document.getElementById(
-                        'roomCode'
-                      ).value =
-                        '${esc(exam.roomCode)}';
-
-                      showView('join');
-                    "
-                  >
-                    Join
-                  </button>
+                  ${
+                    joinDisabled
+                      ? `
+                        <span class="exam-meta">
+                          Waiting for examiner
+                        </span>
+                      `
+                      : `
+                        <button
+                          type="button"
+                          class="text-btn"
+                          onclick="
+                            document.getElementById('roomCode').value='${esc(exam.roomCode)}';
+                            showView('join');
+                          "
+                        >
+                          Join
+                        </button>
+                      `
+                  }
 
                 </div>
 
@@ -2830,9 +3320,7 @@ function renderStudentDashboard() {
   }
 
   const results =
-    document.getElementById(
-      'studentResults'
-    );
+    getElement('studentResults');
 
   if (!results) return;
 
@@ -2931,26 +3419,18 @@ function joinExam(e) {
   const db = getDB();
 
   const roomCode =
-    document
-      .getElementById(
-        'roomCode'
-      )
-      .value
+    getElement('roomCode')
+      ?.value
       .trim()
       .toUpperCase();
 
   const roomPassword =
-    document
-      .getElementById(
-        'roomPassword'
-      )
-      .value
+    getElement('roomPassword')
+      ?.value
       .trim();
 
   const message =
-    document.getElementById(
-      'joinMessage'
-    );
+    getElement('joinMessage');
 
   const exam =
     db.exams.find(
@@ -2988,6 +3468,26 @@ function joinExam(e) {
 
   const status =
     formatStatus(exam);
+
+  if (
+    status === 'waiting' ||
+    status === 'ready'
+  ) {
+
+    if (message) {
+
+      message.innerHTML = `
+        <div class="notice">
+          The examiner has not started this
+          examination yet.
+          Please wait until the teacher starts it.
+        </div>
+      `;
+
+    }
+
+    return;
+  }
 
   if (status === 'completed') {
 
@@ -3075,6 +3575,23 @@ function initLiveExam() {
     return;
   }
 
+  /*
+   * IMPORTANT:
+   * If teacher has not started exam,
+   * student cannot enter.
+   */
+  if (!exam.startedAt) {
+
+    alert(
+      'The examiner has not started this examination yet.'
+    );
+
+    location.href =
+      'student.html';
+
+    return;
+  }
+
   const questions =
     (exam.questionIds || [])
       .map(
@@ -3088,32 +3605,38 @@ function initLiveExam() {
 
   if (!questions.length) {
 
+    alert(
+      'This examination does not contain any questions.'
+    );
+
     location.href =
       'student.html';
 
     return;
   }
 
-  const scheduledStart =
+  /*
+   * REAL START TIME
+   */
+  const actualStart =
     getExamStartTime(exam);
 
-  const scheduledEnd =
+  /*
+   * REAL END TIME
+   */
+  const actualEnd =
     getExamEndTime(exam);
 
   const now =
     Date.now();
 
   if (
-    Number.isNaN(
-      scheduledStart
-    ) ||
-    Number.isNaN(
-      scheduledEnd
-    )
+    Number.isNaN(actualStart) ||
+    Number.isNaN(actualEnd)
   ) {
 
     alert(
-      'This examination has an invalid schedule.'
+      'This examination has an invalid start time.'
     );
 
     location.href =
@@ -3122,19 +3645,17 @@ function initLiveExam() {
     return;
   }
 
-  if (now < scheduledStart) {
-
-    alert(
-      `This examination has not started yet.\n\nStart time: ${exam.date} ${exam.startTime}`
-    );
-
-    location.href =
-      'student.html';
-
-    return;
-  }
-
-  if (now >= scheduledEnd) {
+  /*
+   * Late joining is allowed.
+   *
+   * Example:
+   * Teacher starts at 10:00
+   * Duration = 60 minutes
+   *
+   * Student joins at 10:25
+   * Remaining time = 35 minutes.
+   */
+  if (now >= actualEnd) {
 
     alert(
       'This examination has already ended.'
@@ -3165,34 +3686,39 @@ function initLiveExam() {
     );
 
   const title =
-    document.getElementById(
-      'liveExamTitle'
-    );
+    getElement('liveExamTitle');
 
   if (title) {
     title.textContent =
       exam.title;
   }
 
+
+  /* =======================================================
+     SAVE PROGRESS
+     ======================================================= */
+
   function saveProgress() {
 
     sessionStorage.setItem(
       'examora_answers',
-      JSON.stringify(
-        answers
-      )
+      JSON.stringify(answers)
     );
 
     const state =
-      document.getElementById(
-        'saveState'
-      );
+      getElement('saveState');
 
     if (state) {
       state.textContent =
         'Saved ✓';
     }
+
   }
+
+
+  /* =======================================================
+     RENDER QUESTION
+     ======================================================= */
 
   function render() {
 
@@ -3202,23 +3728,17 @@ function initLiveExam() {
     if (!question) return;
 
     const number =
-      document.getElementById(
-        'questionNumber'
-      );
+      getElement('questionNumber');
 
     if (number) {
 
       number.textContent =
-        `Question ${
-          index + 1
-        }`;
+        `Question ${index + 1}`;
 
     }
 
     const marks =
-      document.getElementById(
-        'questionMarks'
-      );
+      getElement('questionMarks');
 
     if (marks) {
 
@@ -3232,9 +3752,7 @@ function initLiveExam() {
     }
 
     const text =
-      document.getElementById(
-        'questionText'
-      );
+      getElement('questionText');
 
     if (text) {
 
@@ -3244,16 +3762,12 @@ function initLiveExam() {
     }
 
     const progress =
-      document.getElementById(
-        'progressText'
-      );
+      getElement('progressText');
 
     if (progress) {
 
       progress.textContent =
-        `${index + 1} / ${
-          questions.length
-        }`;
+        `${index + 1} / ${questions.length}`;
 
     }
 
@@ -3263,6 +3777,9 @@ function initLiveExam() {
       ] ?? '';
 
     let html = '';
+
+
+    /* MCQ */
 
     if (
       question.type ===
@@ -3280,8 +3797,7 @@ function initLiveExam() {
                 class="
                   answer-option
                   ${
-                    value ===
-                    letter
+                    value === letter
                       ? 'selected'
                       : ''
                   }
@@ -3293,8 +3809,7 @@ function initLiveExam() {
                   name="ans"
                   value="${letter}"
                   ${
-                    value ===
-                    letter
+                    value === letter
                       ? 'checked'
                       : ''
                   }
@@ -3306,9 +3821,8 @@ function initLiveExam() {
 
                 ${esc(
                   question
-                    .options?.[
-                      letter
-                    ] || ''
+                    .options?.[letter] ||
+                  ''
                 )}
 
               </label>
@@ -3321,6 +3835,9 @@ function initLiveExam() {
       `;
 
     }
+
+
+    /* TRUE / FALSE */
 
     else if (
       question.type ===
@@ -3341,8 +3858,7 @@ function initLiveExam() {
                 class="
                   answer-option
                   ${
-                    value ===
-                    answerValue
+                    value === answerValue
                       ? 'selected'
                       : ''
                   }
@@ -3354,8 +3870,7 @@ function initLiveExam() {
                   name="ans"
                   value="${answerValue}"
                   ${
-                    value ===
-                    answerValue
+                    value === answerValue
                       ? 'checked'
                       : ''
                   }
@@ -3374,6 +3889,9 @@ function initLiveExam() {
 
     }
 
+
+    /* NUMERICAL */
+
     else if (
       question.type ===
       'numerical'
@@ -3385,15 +3903,16 @@ function initLiveExam() {
           id="textAnswer"
           type="number"
           step="any"
-          placeholder="
-            Enter your numerical answer...
-          "
+          placeholder="Enter your numerical answer..."
           value="${esc(value)}"
         >
 
       `;
 
     }
+
+
+    /* SHORT / LONG */
 
     else {
 
@@ -3402,9 +3921,7 @@ function initLiveExam() {
         <textarea
           id="textAnswer"
           rows="8"
-          placeholder="
-            Write your answer here...
-          "
+          placeholder="Write your answer here..."
         >${esc(value)}</textarea>
 
       `;
@@ -3412,9 +3929,7 @@ function initLiveExam() {
     }
 
     const answerArea =
-      document.getElementById(
-        'answerArea'
-      );
+      getElement('answerArea');
 
     if (answerArea) {
 
@@ -3423,6 +3938,10 @@ function initLiveExam() {
 
     }
 
+
+    /*
+     * Radio events
+     */
     document
       .querySelectorAll(
         'input[name="ans"]'
@@ -3447,10 +3966,11 @@ function initLiveExam() {
 
       });
 
-    document
-      .getElementById(
-        'textAnswer'
-      )
+
+    /*
+     * Text/numerical events
+     */
+    getElement('textAnswer')
       ?.addEventListener(
         'input',
         event => {
@@ -3462,32 +3982,19 @@ function initLiveExam() {
 
           saveProgress();
 
+          updateAnsweredCount();
+
         }
       );
 
-    const answeredCount =
-      document.getElementById(
-        'answeredCount'
-      );
 
-    if (answeredCount) {
+    updateAnsweredCount();
 
-      answeredCount.textContent =
-        Object.values(
-          answers
-        ).filter(
-          value =>
-            String(
-              value
-            ).trim() !== ''
-        ).length;
 
-    }
+    /* Review button */
 
     const reviewButton =
-      document.getElementById(
-        'reviewButton'
-      );
+      getElement('reviewButton');
 
     if (reviewButton) {
 
@@ -3508,8 +4015,11 @@ function initLiveExam() {
 
     }
 
+
+    /* Question navigation */
+
     const navGrid =
-      document.getElementById(
+      getElement(
         'questionNavGrid'
       );
 
@@ -3521,28 +4031,23 @@ function initLiveExam() {
             (q, i) => `
 
               <button
+                type="button"
                 class="
                   ${
                     String(
-                      answers[
-                        q.id
-                      ] ?? ''
+                      answers[q.id] ?? ''
                     ).trim()
                       ? 'answered'
                       : ''
                   }
 
                   ${
-                    reviews[
-                      q.id
-                    ]
+                    reviews[q.id]
                       ? 'review'
                       : ''
                   }
                 "
-                onclick="
-                  window.examGo(${i})
-                "
+                onclick="window.examGo(${i})"
               >
                 ${i + 1}
               </button>
@@ -3552,6 +4057,34 @@ function initLiveExam() {
           .join('');
 
     }
+
+  }
+
+
+  /* =======================================================
+     ANSWER COUNT
+     ======================================================= */
+
+  function updateAnsweredCount() {
+
+    const answeredCount =
+      getElement(
+        'answeredCount'
+      );
+
+    if (!answeredCount) {
+      return;
+    }
+
+    answeredCount.textContent =
+      Object.values(
+        answers
+      ).filter(
+        value =>
+          String(
+            value
+          ).trim() !== ''
+      ).length;
 
   }
 
@@ -3667,16 +4200,13 @@ function initLiveExam() {
         'student@example.com',
 
       submittedAt:
-        new Date()
-          .toLocaleString(),
+        new Date().toLocaleString(),
 
       total:
         questions.reduce(
           (sum, q) =>
             sum +
-            Number(
-              q.marks
-            ),
+            Number(q.marks),
           0
         ),
 
@@ -3784,9 +4314,7 @@ function initLiveExam() {
 
           /* AUTOMATIC MARKING */
 
-          if (
-            !question.manual
-          ) {
+          if (!question.manual) {
 
             if (correct) {
 
@@ -3799,14 +4327,14 @@ function initLiveExam() {
 
             else if (
               cleanValue !== '' &&
-              question.negativeMarks >
-                0
+              Number(
+                question.negativeMarks
+              ) > 0
             ) {
 
               awarded =
                 -Number(
-                  question
-                    .negativeMarks
+                  question.negativeMarks
                 );
 
             }
@@ -3874,12 +4402,9 @@ function initLiveExam() {
         0
       );
 
-
     /*
-     * Optional: prevent negative
-     * total score.
+     * Score cannot go below zero.
      */
-
     attempt.score =
       Math.max(
         0,
@@ -3954,44 +4479,45 @@ function initLiveExam() {
       return;
     }
 
+    /*
+     * IMPORTANT:
+     * Timer uses actual teacher start time.
+     *
+     * Therefore late students get less time.
+     */
     const remaining =
       Math.max(
         0,
-        scheduledEnd -
+        actualEnd -
           Date.now()
       );
 
-    const minutes =
-      Math.floor(
-        remaining /
-          60000
-      );
-
-    const seconds =
-      Math.floor(
-        remaining /
-          1000
-      ) % 60;
-
     const timer =
-      document.getElementById(
-        'timer'
-      );
+      getElement('timer');
 
     if (timer) {
 
       timer.textContent =
-        `${String(
-          minutes
-        ).padStart(
-          2,
-          '0'
-        )}:${String(
-          seconds
-        ).padStart(
-          2,
-          '0'
-        )}`;
+        formatRemainingTime(
+          remaining
+        );
+
+    }
+
+    /*
+     * Optional warning state.
+     */
+    if (timer) {
+
+      timer.classList.toggle(
+        'warning',
+        remaining <= 5 * 60000
+      );
+
+      timer.classList.toggle(
+        'danger',
+        remaining <= 60000
+      );
 
     }
 
@@ -4024,6 +4550,9 @@ function initLiveExam() {
   }
 
 
+  /*
+   * Initial render + timer.
+   */
   render();
 
   tick();
@@ -4066,9 +4595,7 @@ function initResult() {
   }
 
   const title =
-    document.getElementById(
-      'resultTitle'
-    );
+    getElement('resultTitle');
 
   if (title) {
 
@@ -4079,9 +4606,7 @@ function initResult() {
   }
 
   const score =
-    document.getElementById(
-      'resultScore'
-    );
+    getElement('resultScore');
 
   if (score) {
     score.textContent =
@@ -4089,9 +4614,7 @@ function initResult() {
   }
 
   const total =
-    document.getElementById(
-      'resultTotal'
-    );
+    getElement('resultTotal');
 
   if (total) {
     total.textContent =
@@ -4099,9 +4622,7 @@ function initResult() {
   }
 
   const percent =
-    document.getElementById(
-      'resultPercent'
-    );
+    getElement('resultPercent');
 
   if (percent) {
 
@@ -4111,8 +4632,7 @@ function initResult() {
           ? (
               attempt.score /
               attempt.total
-            ) *
-            100
+            ) * 100
           : 0
       ).toFixed(1) +
       '%';
@@ -4120,9 +4640,7 @@ function initResult() {
   }
 
   const correct =
-    document.getElementById(
-      'resultCorrect'
-    );
+    getElement('resultCorrect');
 
   if (correct) {
 
@@ -4135,9 +4653,7 @@ function initResult() {
   }
 
   const status =
-    document.getElementById(
-      'resultStatus'
-    );
+    getElement('resultStatus');
 
   if (status) {
 
@@ -4150,9 +4666,7 @@ function initResult() {
   }
 
   const note =
-    document.getElementById(
-      'resultNote'
-    );
+    getElement('resultNote');
 
   if (note) {
 
@@ -4184,9 +4698,7 @@ function renderStudentHistory() {
     );
 
   const box =
-    document.getElementById(
-      'historyList'
-    );
+    getElement('historyList');
 
   if (!box) return;
 
@@ -4270,6 +4782,192 @@ function renderStudentHistory() {
 
 
 /* =========================================================
+   ADMIN / USER MANAGEMENT
+   ========================================================= */
+
+/*
+   IMPORTANT:
+   This is only a frontend helper.
+   Anyone who can modify the JavaScript/localStorage
+   can bypass client-side admin restrictions.
+
+   Real admin protection must be implemented
+   on a backend.
+*/
+
+const ADMIN_EMAILS = [
+  'examiner@example.com'
+];
+
+function isAdminUser() {
+
+  const db = getDB();
+
+  const email =
+    String(
+      db.user?.email || ''
+    )
+      .trim()
+      .toLowerCase();
+
+  return ADMIN_EMAILS.includes(
+    email
+  );
+}
+
+function requireAdmin() {
+
+  if (!isAdminUser()) {
+
+    alert(
+      'Access denied. Only the administrator can access this section.'
+    );
+
+    return false;
+  }
+
+  return true;
+}
+
+
+/*
+   Generic Manage button handler.
+   This prevents the "Manage" button from doing
+   absolutely nothing.
+ */
+function manageUser(userId = null) {
+
+  /*
+   * If your admin page is intended only for you,
+   * check admin permission first.
+   */
+  if (!requireAdmin()) {
+    return;
+  }
+
+  const db = getDB();
+
+  /*
+   * If your HTML later passes a real user ID,
+   * this section can be expanded for editing.
+   */
+  if (!userId) {
+
+    alert(
+      'User management is available to the administrator.'
+    );
+
+    return;
+  }
+
+  const user =
+    db.users?.find(
+      u => u.id === userId
+    );
+
+  if (!user) {
+
+    alert(
+      'User was not found.'
+    );
+
+    return;
+  }
+
+  /*
+   * Basic management dialog for now.
+   */
+  const action =
+    prompt(
+      `Manage user:\n\n` +
+      `Name: ${user.name || '—'}\n` +
+      `Email: ${user.email || '—'}\n\n` +
+      `Enter:\n` +
+      `1 = View\n` +
+      `2 = Delete`
+    );
+
+  if (action === '1') {
+
+    alert(
+      `User\n\n` +
+      `Name: ${user.name || '—'}\n` +
+      `Email: ${user.email || '—'}`
+    );
+
+    return;
+  }
+
+  if (action === '2') {
+
+    if (
+      !confirm(
+        `Delete user ${user.email || user.name}?`
+      )
+    ) {
+      return;
+    }
+
+    db.users =
+      db.users.filter(
+        u =>
+          u.id !== userId
+      );
+
+    saveDB(db);
+
+    logEvent(
+      `Deleted user ${user.email || user.name}`
+    );
+
+    alert(
+      'User deleted successfully.'
+    );
+
+    /*
+     * If an admin user table exists,
+     * refresh it.
+     */
+    if (
+      typeof renderUsers ===
+      'function'
+    ) {
+      renderUsers();
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   ADMIN ACCESS HELPER
+   ========================================================= */
+
+function openAdminPortal() {
+
+  if (!requireAdmin()) {
+    return;
+  }
+
+  /*
+   * If your project has an admin.html page,
+   * this will open it.
+   */
+  if (
+    location.pathname.includes(
+      'admin.html'
+    )
+  ) {
+    return;
+  }
+
+  location.href =
+    'admin.html';
+}
+
+
+/* =========================================================
    GLOBAL INITIALIZATION SUPPORT
    ========================================================= */
 
@@ -4281,3 +4979,62 @@ window.addEventListener(
 
   }
 );
+
+
+/* =========================================================
+   GLOBAL EXPORTS
+   ========================================================= */
+
+window.toggleTheme =
+  toggleTheme;
+
+window.showView =
+  showView;
+
+window.closeQuestionModal =
+  closeQuestionModal;
+
+window.openQuestionModal =
+  openQuestionModal;
+
+window.copyRoomCode =
+  copyRoomCode;
+
+window.startExam =
+  startExam;
+
+window.viewRoom =
+  viewRoom;
+
+window.deleteExam =
+  deleteExam;
+
+window.openGrading =
+  openGrading;
+
+window.saveGrading =
+  saveGrading;
+
+window.joinExam =
+  joinExam;
+
+window.initExaminer =
+  initExaminer;
+
+window.initStudent =
+  initStudent;
+
+window.initLiveExam =
+  initLiveExam;
+
+window.initResult =
+  initResult;
+
+window.manageUser =
+  manageUser;
+
+window.openAdminPortal =
+  openAdminPortal;
+
+window.isAdminUser =
+  isAdminUser;
