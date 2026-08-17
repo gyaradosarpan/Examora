@@ -2863,3 +2863,110 @@ body.dark .examora-mobile-drawer .nav-item.active {
 body.dark .examora-mobile-drawer-bottom {
     border-color: var(--line);
 }
+/* =========================================================
+   EXAMORA MOBILE MENU
+   ========================================================= */
+
+.mobile-menu-btn {
+    display: none;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 21px;
+    align-items: center;
+    justify-content: center;
+    z-index: 100001;
+}
+
+.mobile-menu-overlay {
+    display: none;
+}
+
+@media (max-width: 1000px) {
+
+    .mobile-menu-btn {
+        display: inline-flex;
+    }
+
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 270px;
+        height: 100vh;
+        z-index: 100000;
+        transform: translateX(-105%);
+        transition: transform .28s cubic-bezier(.22,1,.36,1);
+        box-shadow: 20px 0 50px rgba(0,0,0,.15);
+        overflow-y: auto;
+    }
+
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    .mobile-menu-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(10,16,30,.45);
+        z-index: 99999;
+        display: block;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .25s ease, visibility .25s ease;
+    }
+
+    .mobile-menu-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    body.dark .mobile-menu-overlay {
+        background: rgba(0,0,0,.65);
+    }
+
+    .mobile-menu-close {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+    }
+
+    .mobile-menu-close button {
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--line);
+        background: var(--surface2);
+        color: var(--text);
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+    .sidebar nav {
+        gap: 7px;
+    }
+
+    .nav-item {
+        width: 100%;
+    }
+
+    body.mobile-menu-active {
+        overflow: hidden;
+    }
+}
+
+@media (min-width: 1001px) {
+    .mobile-menu-overlay,
+    .mobile-menu-close {
+        display: none !important;
+    }
+}
