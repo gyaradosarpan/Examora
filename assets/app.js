@@ -5475,18 +5475,28 @@ window.joinExam =
    - Keeps existing animations and mobile menu
    ========================================================= */
 
-function examoraCreateStudentId() {
+function examoraCreateStudentId(forceNew = false) {
   const KEY = 'examora_student_id';
-  let existing = localStorage.getItem(KEY);
 
-  if (existing && /^STU-[A-Z0-9]{8}$/i.test(existing)) {
-    return existing.toUpperCase();
+  /* IMPORTANT:
+     Student identity is session-scoped, NOT localStorage-scoped.
+     localStorage is shared by every student using the same browser/device,
+     which caused different students to receive the same ID.
+  */
+  if (!forceNew) {
+    const existing = sessionStorage.getItem(KEY);
+    if (existing && /^STU-[A-Z0-9]{8}$/i.test(existing)) {
+      return existing.toUpperCase();
+    }
   }
 
   let id = '';
   try {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-      id = window.crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+      id = window.crypto.randomUUID()
+        .replace(/-/g, '')
+        .slice(0, 8)
+        .toUpperCase();
     }
   } catch (_) {}
 
@@ -5494,32 +5504,37 @@ function examoraCreateStudentId() {
     id = Math.random().toString(36).slice(2, 10).toUpperCase();
   }
 
-  existing = `STU-${id}`;
-  localStorage.setItem(KEY, existing);
-  return existing;
+  const studentId = `STU-${id}`;
+  sessionStorage.setItem(KEY, studentId);
+  return studentId;
 }
 
 function examoraGetStudentId() {
-  const id = examoraCreateStudentId();
-  sessionStorage.setItem('examora_student_id', id);
-  return id;
+  return examoraCreateStudentId(false);
 }
 
 function examoraGetStudentName() {
   return String(
-    sessionStorage.getItem('examora_student') ||
-    localStorage.getItem('examora_student_name') ||
-    ''
+    sessionStorage.getItem('examora_student') || ''
   ).trim();
 }
 
 function examoraSetStudentIdentity(name) {
   const cleanName = String(name || '').trim().replace(/\s+/g, ' ');
-  const id = examoraGetStudentId();
+
+  /*
+    Generate a NEW ID whenever a new student identity is submitted.
+    This is what allows two students on the same browser/device to
+    receive different IDs.
+  */
+  const id = examoraCreateStudentId(true);
 
   sessionStorage.setItem('examora_student', cleanName);
   sessionStorage.setItem('examora_student_id', id);
-  localStorage.setItem('examora_student_name', cleanName);
+
+  /* Do not store the student's name/ID in localStorage. */
+  localStorage.removeItem('examora_student_name');
+  localStorage.removeItem('examora_student_id');
 
   return { name: cleanName, id };
 }
