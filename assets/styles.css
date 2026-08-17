@@ -967,3 +967,195 @@ body.dark .badge.ready{
         transform: translateX(0);
     }
 }
+/* =========================================================
+   EXAMORA LIVE PREVIEW ANIMATION
+   ========================================================= */
+
+.preview-window {
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-main {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated preview cards */
+.preview-main::before {
+    content: "EXAMINER PORTAL";
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: var(--primary);
+    animation: previewPortal 8s infinite;
+}
+
+.preview-main::after {
+    content: "Create an exam";
+    position: absolute;
+    top: 42px;
+    left: 24px;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    animation: previewTitle 8s infinite;
+}
+
+/* Existing skeletons become animated blocks */
+.preview-main .skeleton.wide {
+    margin-top: 70px;
+    animation: previewSkeleton 2s ease-in-out infinite;
+}
+
+.preview-grid {
+    animation: previewGrid 8s infinite;
+}
+
+.preview-grid div {
+    animation: previewCard 1.8s ease-in-out infinite alternate;
+}
+
+.preview-grid div:nth-child(2) {
+    animation-delay: .25s;
+}
+
+.preview-grid div:nth-child(3) {
+    animation-delay: .5s;
+}
+
+.preview-main .skeleton:not(.wide) {
+    animation: previewSkeleton 2s ease-in-out infinite;
+}
+
+.preview-main .skeleton:nth-last-child(1) {
+    animation-delay: .3s;
+}
+
+.preview-main .skeleton:nth-last-child(2) {
+    animation-delay: .6s;
+}
+
+
+/* Portal text animation */
+@keyframes previewPortal {
+
+    0%,
+    45% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    50%,
+    95% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes previewTitle {
+
+    0%,
+    45% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    50%,
+    95% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Cards moving slightly */
+@keyframes previewCard {
+
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-7px);
+    }
+}
+
+
+/* Skeleton shimmer */
+@keyframes previewSkeleton {
+
+    0% {
+        opacity: .65;
+        transform: translateX(0);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateX(5px);
+    }
+
+    100% {
+        opacity: .65;
+        transform: translateX(0);
+    }
+}
+
+
+/* Preview window entrance */
+.portal-preview {
+    animation: previewWindowIn 1s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes previewWindowIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* Browser dots */
+.preview-top span {
+    animation: previewDot 1.5s ease-in-out infinite alternate;
+}
+
+.preview-top span:nth-child(2) {
+    animation-delay: .2s;
+}
+
+.preview-top span:nth-child(3) {
+    animation-delay: .4s;
+}
+
+@keyframes previewDot {
+
+    from {
+        transform: scale(.8);
+        opacity: .5;
+    }
+
+    to {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+}
