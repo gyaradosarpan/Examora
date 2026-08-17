@@ -4980,3 +4980,305 @@ window.openAdminPortal =
 
 window.isAdminUser =
   isAdminUser;
+/* =========================================================
+   EXAMORA MOBILE EXAMINER MENU
+   ========================================================= */
+
+function setupExamoraMobileMenu() {
+
+    /* Don't create it twice */
+    if (document.getElementById('examoraMobileMenuBtn')) {
+        return;
+    }
+
+    const topbar = document.querySelector('.topbar');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (!topbar || !sidebar) {
+        return;
+    }
+
+    /* -----------------------------------------------------
+       MENU BUTTON
+       ----------------------------------------------------- */
+
+    const menuButton = document.createElement('button');
+
+    menuButton.id = 'examoraMobileMenuBtn';
+    menuButton.className = 'examora-mobile-menu-btn';
+    menuButton.type = 'button';
+    menuButton.setAttribute(
+        'aria-label',
+        'Open examiner menu'
+    );
+    menuButton.setAttribute(
+        'title',
+        'Examiner menu'
+    );
+
+    menuButton.innerHTML = '☰';
+
+    /* Put button before the brand */
+    topbar.insertBefore(
+        menuButton,
+        topbar.firstChild
+    );
+
+
+    /* -----------------------------------------------------
+       OVERLAY
+       ----------------------------------------------------- */
+
+    const overlay = document.createElement('div');
+
+    overlay.id = 'examoraMobileOverlay';
+    overlay.className = 'examora-mobile-overlay';
+
+
+    /* -----------------------------------------------------
+       DRAWER
+       ----------------------------------------------------- */
+
+    const drawer = document.createElement('aside');
+
+    drawer.id = 'examoraMobileDrawer';
+    drawer.className = 'examora-mobile-drawer';
+
+    drawer.innerHTML = `
+        <div class="examora-mobile-drawer-head">
+
+            <div class="examora-mobile-drawer-brand">
+                <span class="examora-mobile-drawer-brand-mark">
+                    E
+                </span>
+
+                <span>
+                    Examora
+                </span>
+            </div>
+
+            <button
+                type="button"
+                class="examora-mobile-menu-close"
+                id="examoraMobileMenuClose"
+                aria-label="Close menu"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <nav id="examoraMobileNav"></nav>
+
+        <div class="examora-mobile-drawer-bottom">
+
+            <a href="student.html">
+                Student Portal →
+            </a>
+
+            <a href="admin.html">
+                Admin Portal →
+            </a>
+
+            <a href="index.html">
+                Back to Home
+            </a>
+
+        </div>
+    `;
+
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(drawer);
+
+
+    /* -----------------------------------------------------
+       COPY DESKTOP NAVIGATION
+       ----------------------------------------------------- */
+
+    const mobileNav =
+        drawer.querySelector(
+            '#examoraMobileNav'
+        );
+
+    const desktopButtons =
+        sidebar.querySelectorAll(
+            '.nav-item'
+        );
+
+    desktopButtons.forEach(original => {
+
+        const button =
+            original.cloneNode(true);
+
+        button.classList.remove('active');
+
+        button.addEventListener(
+            'click',
+            function () {
+
+                const view =
+                    this.dataset.view;
+
+                closeExamoraMobileMenu();
+
+                if (view) {
+                    showView(view);
+                }
+
+            }
+        );
+
+        mobileNav.appendChild(button);
+    });
+
+
+    /* -----------------------------------------------------
+       OPEN
+       ----------------------------------------------------- */
+
+    menuButton.addEventListener(
+        'click',
+        function () {
+
+            drawer.classList.add('open');
+            overlay.classList.add('open');
+
+            document.body.style.overflow = 'hidden';
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       CLOSE
+       ----------------------------------------------------- */
+
+    const closeButton =
+        drawer.querySelector(
+            '#examoraMobileMenuClose'
+        );
+
+    closeButton.addEventListener(
+        'click',
+        closeExamoraMobileMenu
+    );
+
+    overlay.addEventListener(
+        'click',
+        closeExamoraMobileMenu
+    );
+
+
+    /* -----------------------------------------------------
+       ESCAPE KEY
+       ----------------------------------------------------- */
+
+    document.addEventListener(
+        'keydown',
+        function (event) {
+
+            if (event.key === 'Escape') {
+                closeExamoraMobileMenu();
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       KEEP ACTIVE ITEM UPDATED
+       ----------------------------------------------------- */
+
+    const originalShowView =
+        window.showView;
+
+    if (
+        typeof originalShowView ===
+        'function'
+    ) {
+
+        window.showView =
+            function (id) {
+
+                originalShowView(id);
+
+                updateExamoraMobileActiveItem(id);
+
+            };
+
+    }
+
+}
+
+
+/* =========================================================
+   CLOSE MOBILE MENU
+   ========================================================= */
+
+function closeExamoraMobileMenu() {
+
+    const drawer =
+        document.getElementById(
+            'examoraMobileDrawer'
+        );
+
+    const overlay =
+        document.getElementById(
+            'examoraMobileOverlay'
+        );
+
+    if (drawer) {
+        drawer.classList.remove('open');
+    }
+
+    if (overlay) {
+        overlay.classList.remove('open');
+    }
+
+    document.body.style.overflow = '';
+
+}
+
+
+/* =========================================================
+   UPDATE ACTIVE MOBILE NAV
+   ========================================================= */
+
+function updateExamoraMobileActiveItem(id) {
+
+    const drawer =
+        document.getElementById(
+            'examoraMobileDrawer'
+        );
+
+    if (!drawer) {
+        return;
+    }
+
+    drawer
+        .querySelectorAll('.nav-item')
+        .forEach(button => {
+
+            button.classList.toggle(
+                'active',
+                button.dataset.view === id
+            );
+
+        });
+
+}
+
+
+/* =========================================================
+   START MOBILE MENU
+   ========================================================= */
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        setupExamoraMobileMenu();
+
+    }
+);
