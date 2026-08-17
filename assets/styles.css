@@ -360,8 +360,166 @@ body.dark .badge.ready{
   }
 }
 
-@media(prefers-reduced-motion:reduce){
-  .view.active,.stat-card,.section-card{
-    animation:none !important;
-  }
+/* =========================================================
+   EXAMORA ANIMATION FIX
+   ========================================================= */
+
+/* Page/view entrance animation */
+.view.active {
+    display: block;
+    animation: examoraPageEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: opacity, transform;
+}
+
+@keyframes examoraPageEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    60% {
+        opacity: 0.8;
+        transform: translateY(4px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dashboard cards */
+.stat-card {
+    animation: examoraCardEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: opacity, transform;
+}
+
+.stat-card:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.stat-card:nth-child(2) {
+    animation-delay: 0.10s;
+}
+
+.stat-card:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.stat-card:nth-child(4) {
+    animation-delay: 0.20s;
+}
+
+@keyframes examoraCardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Examination rows */
+.exam-row {
+    animation: examoraRowEnter 0.4s ease both;
+}
+
+.exam-row:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.exam-row:nth-child(2) {
+    animation-delay: 0.10s;
+}
+
+.exam-row:nth-child(3) {
+    animation-delay: 0.15s;
+}
+
+.exam-row:nth-child(4) {
+    animation-delay: 0.20s;
+}
+
+@keyframes examoraRowEnter {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Buttons */
+.btn,
+.text-btn,
+.nav-item {
+    transition:
+        transform 0.18s ease,
+        opacity 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Sidebar navigation */
+.nav-item:hover {
+    transform: translateX(3px);
+}
+
+/* Exam card hover */
+.exam-row {
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+.exam-row:hover {
+    background: rgba(63, 98, 232, 0.025);
+}
+
+/* Section cards */
+.section-card {
+    animation: examoraSectionEnter 0.5s ease both;
+}
+
+@keyframes examoraSectionEnter {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Toast animation */
+.examora-toast {
+    animation: examoraToastIn 0.25s ease both;
+}
+
+@keyframes examoraToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(25px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
