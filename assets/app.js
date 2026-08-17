@@ -1,49 +1,254 @@
-const DB_KEY = 'examora_db_v2';
+/* =========================================================
+   EXAMORA - MAIN JAVASCRIPT
+   ========================================================= */
+
+
+/* =========================================================
+   EXAMORA NOTIFICATIONS
+   Replaces browser alert() messages with Examora toasts.
+   ========================================================= */
+
+function showExamoraToast(message, type = 'info', title = '') {
+  const allowedTypes = [
+    'success',
+    'error',
+    'warning',
+    'info'
+  ];
+
+  const safeType =
+    allowedTypes.includes(type)
+      ? type
+      : 'info';
+
+  const icons = {
+    success: '✓',
+    error: '!',
+    warning: '!',
+    info: 'i'
+  };
+
+  const titles = {
+    success: 'Success',
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Notice'
+  };
+
+  let container =
+    document.querySelector(
+      '.examora-toast-container'
+    );
+
+  if (!container) {
+    container =
+      document.createElement('div');
+
+    container.className =
+      'examora-toast-container';
+
+    document.body.appendChild(
+      container
+    );
+  }
+
+  const toast =
+    document.createElement('div');
+
+  toast.className =
+    `examora-toast ${safeType}`;
+
+  const icon =
+    document.createElement('div');
+
+  icon.className =
+    'examora-toast-icon';
+
+  icon.textContent =
+    icons[safeType];
+
+  const content =
+    document.createElement('div');
+
+  content.className =
+    'examora-toast-content';
+
+  const titleElement =
+    document.createElement('span');
+
+  titleElement.className =
+    'examora-toast-title';
+
+  titleElement.textContent =
+    title || titles[safeType];
+
+  const messageElement =
+    document.createElement('span');
+
+  messageElement.className =
+    'examora-toast-message';
+
+  messageElement.textContent =
+    String(message ?? '');
+
+  content.appendChild(
+    titleElement
+  );
+
+  content.appendChild(
+    messageElement
+  );
+
+  const closeBtn =
+    document.createElement('button');
+
+  closeBtn.className =
+    'examora-toast-close';
+
+  closeBtn.type =
+    'button';
+
+  closeBtn.setAttribute(
+    'aria-label',
+    'Close notification'
+  );
+
+  closeBtn.textContent =
+    '×';
+
+  toast.appendChild(icon);
+
+  toast.appendChild(content);
+
+  toast.appendChild(closeBtn);
+
+  container.appendChild(toast);
+
+  let removed = false;
+
+  const removeToast = () => {
+    if (
+      removed ||
+      !toast.isConnected
+    ) {
+      return;
+    }
+
+    removed = true;
+
+    toast.classList.add(
+      'hide'
+    );
+
+    window.setTimeout(() => {
+      if (toast.isConnected) {
+        toast.remove();
+      }
+    }, 220);
+  };
+
+  closeBtn.addEventListener(
+    'click',
+    removeToast
+  );
+
+  window.setTimeout(
+    removeToast,
+    3500
+  );
+}
+
+
+/* =========================================================
+   EXAMORA NOTIFICATION HELPERS
+   ========================================================= */
+
+function examoraSuccess(
+  message,
+  title = 'Success'
+) {
+  showExamoraToast(
+    message,
+    'success',
+    title
+  );
+}
+
+
+function examoraError(
+  message,
+  title = 'Error'
+) {
+  showExamoraToast(
+    message,
+    'error',
+    title
+  );
+}
+
+
+function examoraWarning(
+  message,
+  title = 'Warning'
+) {
+  showExamoraToast(
+    message,
+    'warning',
+    title
+  );
+}
+
+
+function examoraInfo(
+  message,
+  title = 'Notice'
+) {
+  showExamoraToast(
+    message,
+    'info',
+    title
+  );
+}
+
 
 /* =========================================================
    DATABASE
    ========================================================= */
 
-function seedDB() {
-  return {
-    exams: [],
-    questions: [],
-    attempts: [],
-    logs: [],
-    user: {
-      name: 'Demo Examiner',
-      email: 'examiner@example.com'
-    }
-  };
+const DB_KEY =
+  'examora_db_v2';
+
+
+const DEFAULT_DB = {
+  users: [],
+  exams: [],
+  questions: [],
+  attempts: [],
+  events: []
+};
+
+
+/* =========================================================
+   UTILITY FUNCTIONS
+   ========================================================= */
+
+function getElement(id) {
+  return document.getElementById(id);
 }
 
-function getDB() {
-  try {
-    const raw = localStorage.getItem(DB_KEY);
 
-    if (!raw) {
-      return seedDB();
-    }
-
-    const data = JSON.parse(raw);
-
-    data.exams ||= [];
-    data.questions ||= [];
-    data.attempts ||= [];
-    data.logs ||= [];
-
-    data.user ||= {
-      name: 'Demo Examiner',
-      email: 'examiner@example.com'
-    };
-
-    return data;
-
-  } catch (error) {
-    console.error('Database read error:', error);
-    return seedDB();
-  }
+function uid(prefix = 'id') {
+  return (
+    prefix +
+    '_' +
+    Date.now() +
+    '_' +
+    Math.random()
+      .toString(36)
+      .slice(2, 9)
+  );
 }
+
 
 function saveDB(db) {
   localStorage.setItem(
@@ -52,90 +257,589 @@ function saveDB(db) {
   );
 }
 
-function logEvent(text) {
+
+function getDB() {
+  const raw =
+    localStorage.getItem(DB_KEY);
+
+  if (!raw) {
+    const fresh = {
+      ...DEFAULT_DB
+    };
+
+    saveDB(fresh);
+
+    return fresh;
+  }
+
+  try {
+    const parsed =
+      JSON.parse(raw);
+
+    return {
+      ...DEFAULT_DB,
+      ...parsed
+    };
+  } catch (error) {
+    console.error(
+      'Unable to read Examora database:',
+      error
+    );
+
+    const fresh = {
+      ...DEFAULT_DB
+    };
+
+    saveDB(fresh);
+
+    return fresh;
+  }
+}
+
+
+function logEvent(message) {
   const db = getDB();
 
-  db.logs.unshift({
-    text,
-    time: new Date().toLocaleString()
-  });
+  if (!Array.isArray(db.events)) {
+    db.events = [];
+  }
 
-  db.logs = db.logs.slice(0, 100);
+  db.events.unshift({
+    id: uid('event'),
+    message,
+    created:
+      new Date().toISOString()
+  });
 
   saveDB(db);
 }
 
 
+function escapeHTML(value) {
+  return String(
+    value ?? ''
+  )
+    .replace(
+      /&/g,
+      '&amp;'
+    )
+    .replace(
+      /</g,
+      '&lt;'
+    )
+    .replace(
+      />/g,
+      '&gt;'
+    )
+    .replace(
+      /"/g,
+      '&quot;'
+    )
+    .replace(
+      /'/g,
+      '&#039;'
+    );
+}
+
+
+function formatDate(value) {
+  if (!value) {
+    return '—';
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return String(value);
+  }
+
+  return date.toLocaleDateString(
+    'en-IN',
+    {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }
+  );
+}
+
+
+function formatDateTime(value) {
+  if (!value) {
+    return '—';
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return String(value);
+  }
+
+  return date.toLocaleString(
+    'en-IN',
+    {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  );
+}
+
+
+function code(length = 6) {
+  const chars =
+    'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  let result = '';
+
+  for (
+    let i = 0;
+    i < length;
+    i++
+  ) {
+    result +=
+      chars[
+        Math.floor(
+          Math.random() *
+            chars.length
+        )
+      ];
+  }
+
+  return result;
+}
+
+
+function password(length = 8) {
+  const chars =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+
+  let result = '';
+
+  for (
+    let i = 0;
+    i < length;
+    i++
+  ) {
+    result +=
+      chars[
+        Math.floor(
+          Math.random() *
+            chars.length
+        )
+      ];
+  }
+
+  return result;
+}
+
+
 /* =========================================================
-   SECURITY / HELPERS
+   USER HELPERS
    ========================================================= */
 
-function esc(value) {
-  return String(value ?? '').replace(
-    /[&<>'"]/g,
-    char => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[char])
-  );
+function getCurrentUser() {
+  const db = getDB();
+
+  return db.user || null;
 }
 
-function uid(prefix = 'id') {
+
+function setCurrentUser(user) {
+  const db = getDB();
+
+  db.user = user;
+
+  saveDB(db);
+}
+
+
+function clearCurrentUser() {
+  const db = getDB();
+
+  delete db.user;
+
+  saveDB(db);
+}
+
+
+function isLoggedIn() {
+  return !!getCurrentUser();
+}
+
+
+/* =========================================================
+   ROLE HELPERS
+   ========================================================= */
+
+function isTeacher() {
+  const user =
+    getCurrentUser();
+
   return (
-    prefix +
-    '_' +
-    Math.random()
-      .toString(36)
-      .slice(2, 9) +
-    Date.now()
-      .toString(36)
-      .slice(-5)
-  );
-}
-
-function code() {
-  return Math.random()
-    .toString(36)
-    .slice(2, 7)
-    .toUpperCase();
-}
-
-function password() {
-  return String(
-    Math.floor(
-      100000 +
-      Math.random() * 900000
+    user &&
+    (
+      user.role === 'teacher' ||
+      user.role === 'examiner'
     )
   );
 }
 
-function getElement(id) {
-  return document.getElementById(id);
+
+function isStudent() {
+  const user =
+    getCurrentUser();
+
+  return (
+    user &&
+    user.role === 'student'
+  );
 }
 
 
 /* =========================================================
-   THEME
+   AUTHENTICATION
    ========================================================= */
 
-function toggleTheme() {
-  document.body.classList.toggle('dark');
+function loginUser(
+  email,
+  passwordValue
+) {
+  const db = getDB();
 
-  localStorage.setItem(
-    'examora_dark',
-    document.body.classList.contains('dark')
+  const normalizedEmail =
+    String(email || '')
+      .trim()
+      .toLowerCase();
+
+  const user =
+    db.users.find(
+      u =>
+        String(
+          u.email || ''
+        )
+          .trim()
+          .toLowerCase() ===
+          normalizedEmail &&
+        u.password ===
+          passwordValue
+    );
+
+  if (!user) {
+    return null;
+  }
+
+  setCurrentUser(user);
+
+  logEvent(
+    `User logged in: ${user.email}`
+  );
+
+  return user;
+}
+
+
+function registerUser(
+  name,
+  email,
+  passwordValue,
+  role
+) {
+  const db = getDB();
+
+  const normalizedEmail =
+    String(email || '')
+      .trim()
+      .toLowerCase();
+
+  const existing =
+    db.users.find(
+      u =>
+        String(
+          u.email || ''
+        )
+          .trim()
+          .toLowerCase() ===
+        normalizedEmail
+    );
+
+  if (existing) {
+    return {
+      success: false,
+      message:
+        'An account with this email already exists.'
+    };
+  }
+
+  const user = {
+    id: uid('user'),
+    name:
+      String(name || '')
+        .trim(),
+    email:
+      normalizedEmail,
+    password:
+      passwordValue,
+    role:
+      role || 'student',
+    created:
+      new Date().toISOString()
+  };
+
+  db.users.push(user);
+
+  saveDB(db);
+
+  logEvent(
+    `Registered user ${user.email}`
+  );
+
+  return {
+    success: true,
+    user
+  };
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+function logoutUser() {
+  const user =
+    getCurrentUser();
+
+  if (user) {
+    logEvent(
+      `User logged out: ${user.email}`
+    );
+  }
+
+  clearCurrentUser();
+
+  location.href =
+    'index.html';
+}
+
+
+/* =========================================================
+   PAGE INITIALIZATION
+   ========================================================= */
+
+document.addEventListener(
+  'DOMContentLoaded',
+  () => {
+    initializeExamora();
+  }
+);
+
+
+function initializeExamora() {
+
+  /*
+   * Page-specific initialization
+   * is handled below.
+   */
+
+  const page =
+    document.body?.dataset?.page;
+
+  if (page === 'login') {
+    initializeLoginPage();
+  }
+
+  if (page === 'register') {
+    initializeRegisterPage();
+  }
+
+  if (page === 'examiner') {
+    initializeExaminerPage();
+  }
+
+  if (page === 'student') {
+    initializeStudentPage();
+  }
+
+  if (page === 'exam') {
+    initializeExamPage();
+  }
+
+  if (page === 'result') {
+    initializeResultPage();
+  }
+
+  if (page === 'admin') {
+    initializeAdminPage();
+  }
+}
+
+
+/* =========================================================
+   LOGIN PAGE
+   ========================================================= */
+
+function initializeLoginPage() {
+
+  const form =
+    getElement('loginForm');
+
+  if (!form) {
+    return;
+  }
+
+  form.addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+
+      const email =
+        getElement('loginEmail')
+          ?.value
+          ?.trim();
+
+      const passwordValue =
+        getElement('loginPassword')
+          ?.value;
+
+      if (
+        !email ||
+        !passwordValue
+      ) {
+        showExamoraToast(
+          'Please enter your email and password.',
+          'warning'
+        );
+
+        return;
+      }
+
+      const user =
+        loginUser(
+          email,
+          passwordValue
+        );
+
+      if (!user) {
+        showExamoraToast(
+          'Invalid email or password.',
+          'error'
+        );
+
+        return;
+      }
+
+      showExamoraToast(
+        'Login successful.',
+        'success'
+      );
+
+      setTimeout(() => {
+        if (
+          user.role ===
+          'student'
+        ) {
+          location.href =
+            'student.html';
+        } else {
+          location.href =
+            'examiner.html';
+        }
+      }, 500);
+    }
   );
 }
 
-function restoreTheme() {
-  if (
-    localStorage.getItem('examora_dark') === 'true'
-  ) {
-    document.body.classList.add('dark');
+
+/* =========================================================
+   REGISTER PAGE
+   ========================================================= */
+
+function initializeRegisterPage() {
+
+  const form =
+    getElement('registerForm');
+
+  if (!form) {
+    return;
   }
+
+  form.addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+
+      const name =
+        getElement('registerName')
+          ?.value
+          ?.trim();
+
+      const email =
+        getElement('registerEmail')
+          ?.value
+          ?.trim();
+
+      const passwordValue =
+        getElement('registerPassword')
+          ?.value;
+
+      const role =
+        getElement('registerRole')
+          ?.value ||
+        'student';
+
+      if (
+        !name ||
+        !email ||
+        !passwordValue
+      ) {
+        showExamoraToast(
+          'Please fill all required fields.',
+          'warning'
+        );
+
+        return;
+      }
+
+      const result =
+        registerUser(
+          name,
+          email,
+          passwordValue,
+          role
+        );
+
+      if (!result.success) {
+        showExamoraToast(
+          result.message,
+          'error'
+        );
+
+        return;
+      }
+
+      showExamoraToast(
+        'Account created successfully.',
+        'success'
+      );
+
+      setTimeout(() => {
+        location.href =
+          'login.html';
+      }, 700);
+    }
+  );
 }
 
 
@@ -143,448 +847,75 @@ function restoreTheme() {
    NAVIGATION
    ========================================================= */
 
-function setupNav() {
-
-  document
-    .querySelectorAll('.nav-item')
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-          showView(button.dataset.view);
-        }
-      );
-
-    });
-
-  document
-    .querySelectorAll(
-      '.mobile-examiner-nav button'
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-          showView(button.dataset.view);
-        }
-      );
-
-    });
-
-  restoreTheme();
+function goToPage(page) {
+  location.href = page;
 }
 
-function showView(id) {
 
-  if (!id) return;
-
-  document
-    .querySelectorAll('.view')
-    .forEach(view => {
-      view.classList.remove('active');
-    });
-
-  const element =
-    document.getElementById(
-      'view-' + id
-    );
-
-  if (element) {
-    element.classList.add('active');
-  }
-
-  document
-    .querySelectorAll('.nav-item')
-    .forEach(button => {
-
-      button.classList.toggle(
-        'active',
-        button.dataset.view === id
-      );
-
-    });
-
-  document
-    .querySelectorAll(
-      '.mobile-examiner-nav button'
-    )
-    .forEach(button => {
-
-      button.classList.toggle(
-        'active',
-        button.dataset.view === id
-      );
-
-    });
-
-  if (
-    window.location.hash !==
-    '#' + id
-  ) {
-    history.replaceState(
-      null,
-      '',
-      '#' + id
-    );
-  }
-
-  renderCurrentView(id);
-}
-
-function renderCurrentView(id) {
-
-  switch (id) {
-
-    case 'dashboard':
-      renderExaminerDashboard();
-      break;
-
-    case 'questions':
-      renderQuestionBank();
-      break;
-
-    case 'results':
-      renderResults();
-      break;
-
-    case 'audit':
-      renderAudit();
-      break;
-
-    case 'student-dashboard':
-      renderStudentDashboard();
-      break;
-
-    case 'history':
-      renderStudentHistory();
-      break;
-
-    default:
-      break;
-  }
+function goBack() {
+  window.history.back();
 }
 
 
 /* =========================================================
-   EXAM STATUS
+   EXAMINATION CREATION
    ========================================================= */
 
-/*
-   IMPORTANT NEW SYSTEM
-
-   An exam now has:
-
-   status:
-      waiting
-      active
-      completed
-
-   startedAt:
-      actual time when teacher starts exam
-
-   scheduled date/startTime are still kept for
-   displaying the planned schedule.
-
-   TIMER IS BASED ON startedAt.
-*/
-
-function getExamStartTime(exam) {
-
-  if (!exam) {
-    return NaN;
-  }
-
-  /*
-   * Once teacher starts the exam,
-   * startedAt becomes the real start time.
-   */
-  if (exam.startedAt) {
-
-    const realStart =
-      new Date(
-        exam.startedAt
-      ).getTime();
-
-    if (
-      Number.isFinite(realStart)
-    ) {
-      return realStart;
-    }
-  }
-
-  /*
-   * Before teacher starts the exam,
-   * do NOT treat scheduled start as live.
-   */
-  return NaN;
-}
-
-function getScheduledStartTime(exam) {
-
-  if (
-    !exam ||
-    !exam.date ||
-    !exam.startTime
-  ) {
-    return NaN;
-  }
-
-  return new Date(
-    `${exam.date}T${exam.startTime}`
-  ).getTime();
-}
-
-function getExamEndTime(exam) {
-
-  const start =
-    getExamStartTime(exam);
-
-  if (Number.isNaN(start)) {
-    return NaN;
-  }
-
-  return (
-    start +
-    (Number(exam.duration) || 0) *
-      60000
-  );
-}
-
-function isExamStarted(exam) {
-  return !!(
-    exam &&
-    exam.startedAt
-  );
-}
-
-function isExamCompleted(exam) {
-
-  if (!exam) {
-    return false;
-  }
-
-  if (!exam.startedAt) {
-    return false;
-  }
-
-  const end =
-    getExamEndTime(exam);
-
-  if (Number.isNaN(end)) {
-    return false;
-  }
-
-  return Date.now() >= end;
-}
-
-function formatStatus(exam) {
-
-  if (!exam) {
-    return 'upcoming';
-  }
-
-  /*
-   * No startedAt means teacher has not
-   * started the examination yet.
-   */
-  if (!exam.startedAt) {
-
-    if (
-      exam.questionIds &&
-      exam.questionIds.length > 0
-    ) {
-      return 'ready';
-    }
-
-    return 'waiting';
-  }
-
-  if (isExamCompleted(exam)) {
-    return 'completed';
-  }
-
-  return 'active';
-}
-
-
-/* =========================================================
-   EXAM STATUS LABEL
-   ========================================================= */
-
-function statusLabel(status) {
-
-  const labels = {
-    waiting: 'Waiting for questions',
-    ready: 'Ready to start',
-    active: 'Live',
-    completed: 'Completed',
-    upcoming: 'Upcoming'
-  };
-
-  return labels[status] || status;
-}
-
-
-/* =========================================================
-   EXAMINER INITIALIZATION
-   ========================================================= */
-
-function initExaminer() {
-
-  setupNav();
-
-  const db = getDB();
-
-  const examinerName =
-    getElement('examinerName');
-
-  if (examinerName) {
-    examinerName.textContent =
-      db.user.name;
-  }
-
-  setupNegativeMarking();
-
-  const examForm =
-    getElement('examForm');
-
-  if (examForm) {
-
-    examForm.addEventListener(
-      'submit',
-      createExam
-    );
-
-  }
-
-  renderExaminerDashboard();
-
-  if (location.hash) {
-
-    const hash =
-      location.hash.slice(1);
-
-    if (
-      document.getElementById(
-        'view-' + hash
-      )
-    ) {
-      showView(hash);
-    }
-
-  }
-}
-
-
-/* =========================================================
-   NEGATIVE MARKING
-   ========================================================= */
-
-function setupNegativeMarking() {
-
-  const negative =
-    getElement('negative');
-
-  const negativeMarks =
-    getElement('negativeMarks');
-
-  if (!negative) {
-    return;
-  }
-
-  function updateNegativeState() {
-
-    if (!negativeMarks) {
-      return;
-    }
-
-    negativeMarks.disabled =
-      !negative.checked;
-
-    /*
-     * Keep the input visually/state-wise
-     * synchronized.
-     */
-    if (!negative.checked) {
-
-      negativeMarks.value =
-        negativeMarks.value || '0';
-
-    }
-
-  }
-
-  /*
-   * Avoid duplicate listeners if this function
-   * is called again.
-   */
-  if (
-    negative.dataset.listenerAttached !==
-    'true'
-  ) {
-
-    negative.addEventListener(
-      'change',
-      updateNegativeState
-    );
-
-    negative.dataset.listenerAttached =
-      'true';
-  }
-
-  updateNegativeState();
-}
-
-
-/* =========================================================
-   CREATE EXAM
-   ========================================================= */
-
-function createExam(e) {
-
-  e.preventDefault();
-
-  const db = getDB();
+function createExamination() {
 
   const title =
-    getElement('title')?.value.trim();
+    getElement('examTitle')
+      ?.value
+      ?.trim();
 
   const subject =
-    getElement('subject')?.value.trim();
+    getElement('examSubject')
+      ?.value
+      ?.trim();
 
   const date =
-    getElement('date')?.value;
+    getElement('examDate')
+      ?.value;
 
   const startTime =
-    getElement('startTime')?.value;
+    getElement('examStartTime')
+      ?.value;
 
   const duration =
     Number(
-      getElement('duration')?.value
+      getElement('examDuration')
+        ?.value
     );
 
   const passing =
     Number(
-      getElement('passing')?.value
+      getElement('examPassing')
+        ?.value
     );
 
   const maxStudentsValue =
-    getElement('maxStudents')?.value;
+    getElement('examMaxStudents')
+      ?.value;
 
   const department =
-    getElement('department')?.value.trim();
+    getElement('examDepartment')
+      ?.value
+      ?.trim();
 
   const instructions =
-    getElement('instructions')?.value.trim();
+    getElement('examInstructions')
+      ?.value
+      ?.trim();
 
   const negativeEnabled =
-    getElement('negative')?.checked === true;
+    !!getElement(
+      'negativeMarking'
+    )?.checked;
 
   const negativeMarksInput =
     Number(
-      getElement('negativeMarks')?.value
+      getElement('negativeMarks')
+        ?.value
     );
 
   if (
@@ -592,19 +923,23 @@ function createExam(e) {
     !subject ||
     !date ||
     !startTime ||
-    !Number.isFinite(duration) ||
+    !Number.isFinite(
+      duration
+    ) ||
     duration <= 0
   ) {
 
-    alert(
-      'Please fill all required examination fields.'
+    showExamoraToast(
+      'Please fill all required examination fields.',
+      'warning'
     );
 
     return;
   }
 
-  const ex = {
+  const db = getDB();
 
+  const ex = {
     id: uid('exam'),
 
     title,
@@ -624,7 +959,9 @@ function createExam(e) {
 
     maxStudents:
       maxStudentsValue
-        ? Number(maxStudentsValue)
+        ? Number(
+            maxStudentsValue
+          )
         : null,
 
     department,
@@ -662,11 +999,11 @@ function createExam(e) {
     /*
      * Helps make the state explicit.
      */
-    status: 'waiting',
+    status:
+      'waiting',
 
     created:
       new Date().toISOString()
-
   };
 
   db.exams.unshift(ex);
@@ -677,261 +1014,15 @@ function createExam(e) {
     `Created examination "${ex.title}" with room ${ex.roomCode}`
   );
 
-  const form =
-    getElement('examForm');
-
-  if (form) {
-    form.reset();
-  }
-
-  /*
-   * Reset negative marking safely.
-   */
-  const negative =
-    getElement('negative');
-
-  const negativeMarks =
-    getElement('negativeMarks');
-
-  if (negative) {
-    negative.checked = false;
-  }
-
-  if (negativeMarks) {
-    negativeMarks.disabled = true;
-    negativeMarks.value = '0';
-  }
-
-  renderExaminerDashboard();
-
-  showRoomCreated(ex);
-}
-
-
-/* =========================================================
-   ROOM CREATED MODAL
-   ========================================================= */
-
-function showRoomCreated(ex) {
-
-  const modal =
-    getElement('questionModal');
-
-  if (!modal) return;
-
-  modal.classList.remove('hidden');
-
-  modal.innerHTML = `
-
-    <div class="modal-box">
-
-      <button
-        class="modal-close"
-        type="button"
-        onclick="closeQuestionModal()"
-      >
-        ×
-      </button>
-
-      <div class="eyebrow">
-        ROOM CREATED
-      </div>
-
-      <h2>
-        ${esc(ex.title)}
-      </h2>
-
-      <div class="notice">
-
-        Room created successfully.
-
-        <br><br>
-
-        <b>
-          The examination timer has NOT started.
-        </b>
-
-        Add all questions first, then use
-        <b>Start Exam</b> from the dashboard.
-
-      </div>
-
-      <div class="section-card">
-
-        <div class="exam-meta">
-          ROOM CODE
-        </div>
-
-        <div class="room-credential-value">
-          ${esc(ex.roomCode)}
-        </div>
-
-        <button
-          type="button"
-          class="btn btn-primary"
-          onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
-        >
-          Copy Room Code
-        </button>
-
-      </div>
-
-      <div class="section-card">
-
-        <div class="exam-meta">
-          ROOM PASSWORD
-        </div>
-
-        <div class="room-credential-value password-display">
-          ${esc(ex.roomPassword)}
-        </div>
-
-        <div class="security-note">
-          Keep this password private.
-        </div>
-
-      </div>
-
-      <div class="section-card">
-
-        <div class="exam-meta">
-          QUESTIONS
-        </div>
-
-        <div class="room-credential-value">
-          0
-        </div>
-
-        <div class="security-note">
-          Add questions before starting the exam.
-        </div>
-
-      </div>
-
-      <button
-        type="button"
-        class="btn btn-secondary full"
-        style="margin-top:14px"
-        onclick="
-          closeQuestionModal();
-          showView('questions');
-        "
-      >
-        Add Questions
-      </button>
-
-    </div>
-
-  `;
-}
-
-
-/* =========================================================
-   COPY ROOM CODE
-   ========================================================= */
-
-function copyRoomCode(
-  value,
-  button = null
-) {
-
-  const copySuccess = () => {
-
-    logEvent(
-      `Copied room code ${value}`
-    );
-
-    if (button) {
-
-      const oldText =
-        button.textContent;
-
-      button.textContent =
-        'Copied ✓';
-
-      setTimeout(() => {
-
-        button.textContent =
-          oldText;
-
-      }, 1200);
-
-    }
-
-  };
-
-  if (
-    navigator.clipboard &&
-    window.isSecureContext
-  ) {
-
-    navigator.clipboard
-      .writeText(value)
-      .then(copySuccess)
-      .catch(() => {
-
-        fallbackCopy(value);
-        copySuccess();
-
-      });
-
-  } else {
-
-    fallbackCopy(value);
-    copySuccess();
-
-  }
-}
-
-function fallbackCopy(text) {
-
-  const textarea =
-    document.createElement('textarea');
-
-  textarea.value = text;
-
-  textarea.style.position =
-    'fixed';
-
-  textarea.style.opacity =
-    '0';
-
-  document.body.appendChild(
-    textarea
+  showExamoraToast(
+    `Examination "${ex.title}" created successfully.`,
+    'success'
   );
 
-  textarea.select();
-
-  try {
-    document.execCommand('copy');
-  } catch (error) {
-    console.error(
-      'Copy failed:',
-      error
-    );
-  }
-
-  textarea.remove();
-}
-
-
-/* =========================================================
-   START EXAM
+  renderExaminerDashboard();
+   /* =========================================================
+   EXAMINER DASHBOARD
    ========================================================= */
-
-/*
-   THIS IS THE MOST IMPORTANT NEW FUNCTION.
-
-   Teacher creates room
-          ↓
-   Adds questions
-          ↓
-   Clicks Start Exam
-          ↓
-   startedAt is saved
-          ↓
-   Timer starts
-*/
 
 function startExam(examId) {
 
@@ -944,8 +1035,9 @@ function startExam(examId) {
 
   if (!exam) {
 
-    alert(
-      'Examination not found.'
+    showExamoraToast(
+      'Examination not found.',
+      'error'
     );
 
     return;
@@ -953,8 +1045,9 @@ function startExam(examId) {
 
   if (exam.startedAt) {
 
-    alert(
-      'This examination has already started.'
+    showExamoraToast(
+      'This examination has already started.',
+      'warning'
     );
 
     return;
@@ -965,8 +1058,9 @@ function startExam(examId) {
 
   if (questionCount === 0) {
 
-    alert(
-      'You cannot start the examination yet.\n\nPlease add all questions first.'
+    showExamoraToast(
+      'You cannot start the examination yet. Please add all questions first.',
+      'warning'
     );
 
     return;
@@ -1001,8 +1095,9 @@ function startExam(examId) {
 
   renderExaminerDashboard();
 
-  alert(
-    `Exam "${exam.title}" has started.\n\nThe ${exam.duration}-minute timer is now running.`
+  showExamoraToast(
+    `Exam "${exam.title}" has started. The ${exam.duration}-minute timer is now running.`,
+    'success'
   );
 }
 
@@ -1017,548 +1112,268 @@ function renderExaminerDashboard() {
 
   /*
    * Automatically mark exams completed
-   * when their real timer has expired.
+   * when their timer has expired.
    */
-  db.exams.forEach(exam => {
 
-    if (
-      exam.startedAt &&
-      isExamCompleted(exam) &&
-      exam.status !== 'completed'
-    ) {
+  const now =
+    Date.now();
 
-      exam.status =
-        'completed';
+  db.exams.forEach(
+    exam => {
 
+      if (
+        !exam.startedAt ||
+        exam.status === 'completed'
+      ) {
+        return;
+      }
+
+      const start =
+        new Date(
+          exam.startedAt
+        ).getTime();
+
+      const end =
+        start +
+        (
+          Number(
+            exam.duration
+          ) || 0
+        ) *
+        60 *
+        1000;
+
+      if (
+        Number.isFinite(end) &&
+        now >= end
+      ) {
+        exam.status =
+          'completed';
+
+        if (
+          !exam.completedAt
+        ) {
+          exam.completedAt =
+            new Date().toISOString();
+        }
+      }
     }
-
-  });
+  );
 
   saveDB(db);
 
-  const active =
-    db.exams.filter(
-      x =>
-        formatStatus(x) ===
-        'active'
-    ).length;
+  const container =
+    getElement(
+      'examinerExamList'
+    );
 
-  const upcoming =
-    db.exams.filter(
-      x => {
-
-        const status =
-          formatStatus(x);
-
-        return (
-          status === 'waiting' ||
-          status === 'ready'
-        );
-
-      }
-    ).length;
-
-  const completed =
-    db.exams.filter(
-      x =>
-        formatStatus(x) ===
-        'completed'
-    ).length;
-
-  const students =
-    new Set(
-      db.attempts.map(
-        a => a.studentEmail
-      )
-    ).size;
-
-  const activeCount =
-    getElement('activeCount');
-
-  if (activeCount) {
-    activeCount.textContent =
-      active;
+  if (!container) {
+    return;
   }
 
-  const upcomingCount =
-    getElement('upcomingCount');
+  const exams =
+    Array.isArray(db.exams)
+      ? db.exams
+      : [];
 
-  if (upcomingCount) {
-    upcomingCount.textContent =
-      upcoming;
-  }
+  if (!exams.length) {
 
-  const completedCount =
-    getElement('completedCount');
-
-  if (completedCount) {
-    completedCount.textContent =
-      completed;
-  }
-
-  const studentCount =
-    getElement('studentCount');
-
-  if (studentCount) {
-    studentCount.textContent =
-      students;
-  }
-
-  const box =
-    getElement('examList');
-
-  if (!box) return;
-
-  if (!db.exams.length) {
-
-    box.innerHTML = `
-      <div class="empty">
-        No examinations yet.
-        Create your first exam room.
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>No examinations yet</h3>
+        <p>Create an examination room to get started.</p>
       </div>
     `;
 
     return;
   }
 
-  box.innerHTML =
-    db.exams
-      .map(ex => {
+  container.innerHTML =
+    exams
+      .map(
+        exam => {
 
-        const status =
-          formatStatus(ex);
+          const questionCount =
+            exam.questionIds?.length ||
+            0;
 
-        const qCount =
-          ex.questionIds?.length || 0;
-
-        let action = '';
-
-        if (
-          status === 'waiting' ||
-          status === 'ready'
-        ) {
-
-          action = `
-
-            <button
-              type="button"
-              class="text-btn"
-              onclick="showView('questions')"
-            >
-              Add Questions
-            </button>
-
-            ${
-              qCount > 0
-                ? `
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    onclick="startExam('${ex.id}')"
-                  >
-                    Start Exam
-                  </button>
-                `
-                : ''
-            }
-
-          `;
-
-        }
-
-        else if (
-          status === 'active'
-        ) {
-
-          const end =
-            getExamEndTime(ex);
-
-          const remaining =
-            Math.max(
-              0,
-              end - Date.now()
+          const status =
+            exam.status ||
+            (
+              exam.startedAt
+                ? 'active'
+                : 'waiting'
             );
 
-          action = `
+          const statusLabel =
+            status
+              .charAt(0)
+              .toUpperCase() +
+            status.slice(1);
 
-            <span class="exam-meta">
-              Time remaining:
-              ${formatRemainingTime(remaining)}
-            </span>
+          return `
+            <div class="exam-card">
 
-          `;
+              <div class="exam-card-header">
 
-        }
+                <div>
+                  <h3>
+                    ${escapeHTML(
+                      exam.title
+                    )}
+                  </h3>
 
-        else {
+                  <p>
+                    ${escapeHTML(
+                      exam.subject
+                    )}
+                  </p>
+                </div>
 
-          action = `
-            <span class="exam-meta">
-              Exam ended
-            </span>
-          `;
+                <span
+                  class="exam-status ${escapeHTML(
+                    status
+                  )}"
+                >
+                  ${escapeHTML(
+                    statusLabel
+                  )}
+                </span>
 
-        }
+              </div>
 
-        return `
+              <div class="exam-card-details">
 
-          <div class="exam-row">
+                <div>
+                  <strong>Date</strong>
+                  <span>
+                    ${escapeHTML(
+                      formatDate(
+                        exam.date
+                      )
+                    )}
+                  </span>
+                </div>
 
-            <div>
+                <div>
+                  <strong>Start</strong>
+                  <span>
+                    ${escapeHTML(
+                      exam.startTime
+                    )}
+                  </span>
+                </div>
 
-              <b>
-                ${esc(ex.title)}
-              </b>
+                <div>
+                  <strong>Duration</strong>
+                  <span>
+                    ${escapeHTML(
+                      exam.duration
+                    )} min
+                  </span>
+                </div>
 
-              <div class="exam-meta">
+                <div>
+                  <strong>Questions</strong>
+                  <span>
+                    ${questionCount}
+                  </span>
+                </div>
 
-                ${esc(ex.subject)}
-                •
-                ${esc(ex.date)}
-                •
-                ${esc(ex.startTime)}
+                <div>
+                  <strong>Room</strong>
+                  <span>
+                    ${escapeHTML(
+                      exam.roomCode
+                    )}
+                  </span>
+                </div>
 
-                <br>
+              </div>
 
-                Room:
-                <b>
-                  ${esc(ex.roomCode)}
-                </b>
+              <div class="exam-card-actions">
+
+                ${
+                  !exam.startedAt
+                    ? `
+                      <button
+                        type="button"
+                        onclick="startExam('${exam.id}')"
+                      >
+                        Start Exam
+                      </button>
+                    `
+                    : ''
+                }
+
+                <button
+                  type="button"
+                  onclick="openQuestionManager('${exam.id}')"
+                >
+                  Questions
+                </button>
+
+                <button
+                  type="button"
+                  onclick="viewExamResults('${exam.id}')"
+                >
+                  Results
+                </button>
+
+                <button
+                  type="button"
+                  onclick="deleteExam('${exam.id}')"
+                >
+                  Delete
+                </button>
 
               </div>
 
             </div>
-
-            <span
-              class="badge ${status}"
-            >
-              ${statusLabel(status)}
-            </span>
-
-            <div class="room-secret">
-
-              <span class="exam-meta">
-                Password
-              </span>
-
-              <span class="secret-value">
-                ${esc(ex.roomPassword)}
-              </span>
-
-            </div>
-
-            <span>
-              ${qCount}
-              question${qCount === 1 ? '' : 's'}
-            </span>
-
-            <div class="room-actions">
-
-              <button
-                type="button"
-                class="text-btn"
-                onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
-              >
-                Copy code
-              </button>
-
-              <button
-                type="button"
-                class="text-btn"
-                onclick="viewRoom('${ex.id}')"
-              >
-                View
-              </button>
-
-              ${action}
-
-            </div>
-
-          </div>
-
-        `;
-
-      })
+          `;
+        }
+      )
       .join('');
 }
 
 
 /* =========================================================
-   FORMAT REMAINING TIME
+   EXAM DELETE
    ========================================================= */
 
-function formatRemainingTime(milliseconds) {
+function deleteExam(examId) {
 
-  const totalSeconds =
-    Math.max(
-      0,
-      Math.floor(
-        milliseconds / 1000
-      )
+  const db = getDB();
+
+  const ex =
+    db.exams.find(
+      x => x.id === examId
     );
 
-  const hours =
-    Math.floor(
-      totalSeconds / 3600
+  if (!ex) {
+
+    showExamoraToast(
+      'Examination not found.',
+      'error'
     );
 
-  const minutes =
-    Math.floor(
-      (totalSeconds % 3600) / 60
-    );
-
-  const seconds =
-    totalSeconds % 60;
-
-  if (hours > 0) {
-
-    return (
-      `${String(hours).padStart(2, '0')}:` +
-      `${String(minutes).padStart(2, '0')}:` +
-      `${String(seconds).padStart(2, '0')}`
-    );
-
+    return;
   }
 
-  return (
-    `${String(minutes).padStart(2, '0')}:` +
-    `${String(seconds).padStart(2, '0')}`
-  );
-}
-
-
-/* =========================================================
-   VIEW ROOM
-   ========================================================= */
-
-function viewRoom(id) {
-
-  const db = getDB();
-
-  const ex =
-    db.exams.find(
-      x => x.id === id
-    );
-
-  if (!ex) return;
+  const questionCount =
+    ex.questionIds?.length ||
+    0;
 
   const attempts =
     db.attempts.filter(
-      a => a.examId === id
-    );
-
-  const qCount =
-    ex.questionIds?.length || 0;
-
-  const status =
-    formatStatus(ex);
-
-  const modal =
-    getElement('questionModal');
-
-  if (!modal) return;
-
-  modal.classList.remove('hidden');
-
-  modal.innerHTML = `
-
-    <div class="modal-box">
-
-      <button
-        class="modal-close"
-        type="button"
-        onclick="closeQuestionModal()"
-      >
-        ×
-      </button>
-
-      <div class="eyebrow">
-        EXAMINATION ROOM
-      </div>
-
-      <h2>
-        ${esc(ex.title)}
-      </h2>
-
-      <div class="section-card">
-
-        <div class="exam-meta">
-          STATUS
-        </div>
-
-        <span class="badge ${status}">
-          ${statusLabel(status)}
-        </span>
-
-      </div>
-
-      <div class="section-card">
-
-        <div class="exam-meta">
-          ROOM CODE
-        </div>
-
-        <strong class="room-credential-value">
-          ${esc(ex.roomCode)}
-        </strong>
-
-        <br>
-
-        <button
-          type="button"
-          class="btn btn-primary"
-          style="margin-top:10px"
-          onclick="copyRoomCode('${esc(ex.roomCode)}', this)"
-        >
-          Copy Room Code
-        </button>
-
-      </div>
-
-      <div class="section-card">
-
-        <div class="exam-meta">
-          ROOM PASSWORD
-        </div>
-
-        <strong class="room-credential-value password-display">
-          ${esc(ex.roomPassword)}
-        </strong>
-
-        <div class="security-note">
-          Keep this password private.
-        </div>
-
-      </div>
-
-      <div class="notice">
-
-        <b>${attempts.length}</b>
-        student attempt(s)
-
-        •
-
-        <b>${qCount}</b>
-        question(s)
-
-        •
-
-        ${esc(ex.duration)}
-        minutes
-
-        <br><br>
-
-        Exam status:
-        <b>
-          ${statusLabel(status)}
-        </b>
-
-        ${
-          ex.startedAt
-            ? `
-              <br>
-              Started:
-              ${new Date(
-                ex.startedAt
-              ).toLocaleString()}
-            `
-            : ''
-        }
-
-      </div>
-
-      ${
-        status === 'ready'
-          ? `
-            <button
-              type="button"
-              class="btn btn-primary full"
-              style="margin-top:14px"
-              onclick="startExam('${ex.id}')"
-            >
-              Start Exam
-            </button>
-          `
-          : ''
-      }
-
-      ${
-        status === 'waiting'
-          ? `
-            <button
-              type="button"
-              class="btn btn-secondary full"
-              style="margin-top:14px"
-              onclick="
-                closeQuestionModal();
-                showView('questions');
-              "
-            >
-              Add Questions
-            </button>
-          `
-          : ''
-      }
-
-      <div
-        style="
-          display:flex;
-          gap:10px;
-          margin-top:14px
-        "
-      >
-
-        <button
-          type="button"
-          class="btn btn-secondary"
-          style="flex:1"
-          onclick="closeQuestionModal()"
-        >
-          Close
-        </button>
-
-        <button
-          type="button"
-          class="btn btn-danger"
-          style="flex:1"
-          onclick="deleteExam('${ex.id}')"
-        >
-          Delete Exam
-        </button>
-
-      </div>
-
-    </div>
-
-  `;
-}
-
-
-/* =========================================================
-   DELETE EXAM
-   ========================================================= */
-
-function deleteExam(id) {
-
-  const db = getDB();
-
-  const ex =
-    db.exams.find(
-      x => x.id === id
-    );
-
-  if (!ex) return;
-
-  const attempts =
-    db.attempts.filter(
-      a => a.examId === id
+      attempt =>
+        attempt.examId ===
+        examId
     ).length;
 
-  const questionCount =
-    ex.questionIds?.length || 0;
-
   const message =
-    `Delete the examination "${ex.title}"?\n\n` +
+    `Delete examination?\n\n` +
+    `Exam: ${ex.title}\n` +
     `Room: ${ex.roomCode}\n` +
     `Questions: ${questionCount}\n` +
     `Student attempts: ${attempts}\n\n` +
@@ -1573,37 +1388,40 @@ function deleteExam(id) {
       ex.questionIds || []
     );
 
-  db.exams =
-    db.exams.filter(
-      e => e.id !== id
-    );
-
   db.questions =
     db.questions.filter(
-      q =>
+      question =>
         !deletedQuestionIds.has(
-          q.id
+          question.id
         )
+    );
+
+  db.exams =
+    db.exams.filter(
+      exam =>
+        exam.id !== examId
     );
 
   db.attempts =
     db.attempts.filter(
-      a =>
-        a.examId !== id
+      attempt =>
+        attempt.examId !==
+        examId
     );
 
   saveDB(db);
 
   logEvent(
-    `Deleted examination "${ex.title}" and closed room ${ex.roomCode}`
+    `Deleted examination "${ex.title}"`
   );
 
   closeQuestionModal();
 
   renderExaminerDashboard();
 
-  alert(
-    `Exam "${ex.title}" has been deleted successfully.`
+  showExamoraToast(
+    `Exam "${ex.title}" has been deleted successfully.`,
+    'success'
   );
 }
 
@@ -1612,474 +1430,66 @@ function deleteExam(id) {
    QUESTION MODAL
    ========================================================= */
 
-function openQuestionModal() {
-
-  const db = getDB();
+function openQuestionManager(
+  examId
+) {
 
   const modal =
-    getElement('questionModal');
-
-  if (!modal) return;
-
-  modal.classList.remove('hidden');
-
-  modal.innerHTML = `
-
-    <div class="modal-box">
-
-      <button
-        class="modal-close"
-        type="button"
-        onclick="closeQuestionModal()"
-      >
-        ×
-      </button>
-
-      <h2>
-        Add Question
-      </h2>
-
-      <form id="questionForm">
-
-        <label>
-
-          Question Type
-
-          <select id="qType">
-
-            <option value="mcq">
-              MCQ
-            </option>
-
-            <option value="truefalse">
-              True / False
-            </option>
-
-            <option value="short">
-              Short Answer
-            </option>
-
-            <option value="long">
-              Long Answer
-            </option>
-
-            <option value="numerical">
-              Numerical
-            </option>
-
-          </select>
-
-        </label>
-
-        <label>
-
-          Add to Examination
-
-          <select id="qExam">
-
-            ${
-              db.exams.length
-                ? db.exams
-                    .map(
-                      ex => `
-
-                        <option
-                          value="${esc(ex.id)}"
-                        >
-                          ${esc(ex.title)}
-                          —
-                          Room
-                          ${esc(ex.roomCode)}
-                          ${
-                            ex.startedAt
-                              ? ' — LIVE'
-                              : ''
-                          }
-                        </option>
-
-                      `
-                    )
-                    .join('')
-
-                : `
-                  <option value="">
-                    Create an examination first
-                  </option>
-                `
-            }
-
-          </select>
-
-        </label>
-
-        <label>
-
-          Question
-
-          <textarea
-            id="qText"
-            rows="3"
-            required
-            placeholder="Enter the question..."
-          ></textarea>
-
-        </label>
-
-        <div
-          id="qOptions"
-          class="form-grid"
-        ></div>
-
-        <label id="correctWrap">
-
-          <span class="field-title">
-            Correct answer
-          </span>
-
-          <input id="correct">
-
-        </label>
-
-        <div class="form-grid">
-
-          <label>
-
-            Marks
-
-            <input
-              id="qMarks"
-              type="number"
-              min="0"
-              step="0.01"
-              value="1"
-              required
-            >
-
-          </label>
-
-          <label>
-
-            Negative Marks
-
-            <input
-              id="qNegative"
-              type="number"
-              min="0"
-              step="0.01"
-              value="0"
-            >
-
-          </label>
-
-        </div>
-
-        <button
-          type="submit"
-          class="btn btn-primary full"
-          ${
-            db.exams.length
-              ? ''
-              : 'disabled'
-          }
-        >
-          Save Question
-        </button>
-
-      </form>
-
-    </div>
-
-  `;
-
-  const type =
-    getElement('qType');
-
-  if (type) {
-
-    type.addEventListener(
-      'change',
-      updateQuestionFields
+    getElement(
+      'questionModal'
     );
 
+  const examSelect =
+    getElement('qExam');
+
+  if (examSelect) {
+    examSelect.value =
+      examId;
   }
 
-  const form =
-    getElement('questionForm');
-
-  if (form) {
-
-    form.addEventListener(
-      'submit',
-      saveQuestion
+  if (modal) {
+    modal.classList.add(
+      'open'
     );
-
   }
 
-  updateQuestionFields();
+  renderQuestionList();
 }
+
 
 function closeQuestionModal() {
 
   const modal =
-    getElement('questionModal');
+    getElement(
+      'questionModal'
+    );
 
-  if (!modal) return;
-
-  modal.classList.add('hidden');
-
-  modal.innerHTML = '';
-}
-
-
-/* =========================================================
-   QUESTION TYPE FIELDS
-   ========================================================= */
-
-function updateQuestionFields() {
-
-  const type =
-    getElement('qType')?.value;
-
-  if (!type) return;
-
-  const options =
-    getElement('qOptions');
-
-  const correctWrap =
-    getElement('correctWrap');
-
-  if (!options || !correctWrap) {
+  if (!modal) {
     return;
   }
 
-  if (type === 'mcq') {
-
-    options.innerHTML =
-      ['A', 'B', 'C', 'D']
-        .map(
-          letter => `
-
-            <label>
-
-              Option ${letter}
-
-              <input
-                id="${letter.toLowerCase()}"
-                required
-              >
-
-            </label>
-
-          `
-        )
-        .join('');
-
-    correctWrap.innerHTML = `
-
-      <span class="field-title">
-        Correct Answer
-      </span>
-
-      <select
-        id="correct"
-        required
-      >
-
-        <option value="">
-          Select correct option
-        </option>
-
-        <option value="A">
-          A
-        </option>
-
-        <option value="B">
-          B
-        </option>
-
-        <option value="C">
-          C
-        </option>
-
-        <option value="D">
-          D
-        </option>
-
-      </select>
-
-    `;
-
-  }
-
-  else if (
-    type === 'truefalse'
-  ) {
-
-    options.innerHTML = `
-
-      <div
-        class="notice type-help"
-        style="grid-column:1/-1"
-      >
-
-        <b>
-          True / False Question
-        </b>
-
-        <br>
-
-        Students will see only
-        True and False.
-
-      </div>
-
-    `;
-
-    correctWrap.innerHTML = `
-
-      <span class="field-title">
-        Correct Answer
-      </span>
-
-      <select
-        id="correct"
-        required
-      >
-
-        <option value="True">
-          True
-        </option>
-
-        <option value="False">
-          False
-        </option>
-
-      </select>
-
-    `;
-
-  }
-
-  else if (
-    type === 'numerical'
-  ) {
-
-    options.innerHTML = `
-
-      <div
-        class="notice type-help"
-        style="grid-column:1/-1"
-      >
-
-        <b>
-          Numerical Question
-        </b>
-
-        <br>
-
-        Students will enter a number.
-        The system compares it with
-        the expected value.
-
-      </div>
-
-    `;
-
-    correctWrap.innerHTML = `
-
-      <span class="field-title">
-        Expected Numerical Answer
-      </span>
-
-      <input
-        id="correct"
-        type="number"
-        step="any"
-        required
-        placeholder="Example: 9.81"
-      >
-
-    `;
-
-  }
-
-  else {
-
-    options.innerHTML = `
-
-      <div
-        class="notice type-help"
-        style="grid-column:1/-1"
-      >
-
-        <b>
-          ${
-            type === 'short'
-              ? 'Short Answer'
-              : 'Long Answer'
-          }
-        </b>
-
-        <br>
-
-        The student writes their own
-        response.
-
-        The teacher will check the
-        answer manually.
-
-      </div>
-
-    `;
-
-    correctWrap.innerHTML = `
-
-      <span class="field-title">
-
-        ${
-          type === 'short'
-            ? 'Reference answer / marking guidance'
-            : 'Reference answer / marking rubric'
-        }
-
-      </span>
-
-      <textarea
-        id="correct"
-        rows="3"
-        placeholder="${
-          type === 'short'
-            ? 'Optional reference answer or key points'
-            : 'Optional marking rubric or key points'
-        }"
-      ></textarea>
-
-    `;
-
-  }
+  modal.classList.remove(
+    'open'
+  );
 }
 
 
 /* =========================================================
-   SAVE QUESTION
+   QUESTION FORM
    ========================================================= */
 
-function saveQuestion(e) {
-
-  e.preventDefault();
+function addQuestion() {
 
   const db = getDB();
-
-  const type =
-    getElement('qType')?.value;
 
   const examId =
     getElement('qExam')?.value;
 
   if (!examId) {
 
-    alert(
-      'Create an examination room first.'
+    showExamoraToast(
+      'Create an examination room first.',
+      'warning'
     );
 
     return;
@@ -2088,38 +1498,48 @@ function saveQuestion(e) {
   const questionText =
     getElement('qText')
       ?.value
-      .trim();
+      ?.trim();
 
   if (!questionText) {
 
-    alert(
-      'Please enter the question.'
+    showExamoraToast(
+      'Please enter the question.',
+      'warning'
     );
 
     return;
   }
 
+  const type =
+    getElement('qType')
+      ?.value ||
+    'mcq';
+
   const marks =
     Number(
-      getElement('qMarks')?.value
+      getElement('qMarks')
+        ?.value
     );
-
-  const negativeMarks =
-    Number(
-      getElement('qNegative')?.value
-    ) || 0;
 
   if (
     !Number.isFinite(marks) ||
     marks <= 0
   ) {
 
-    alert(
-      'Marks must be greater than 0.'
+    showExamoraToast(
+      'Marks must be greater than 0.',
+      'warning'
     );
 
     return;
   }
+
+  const negativeMarks =
+    Number(
+      getElement(
+        'qNegativeMarks'
+      )?.value
+    );
 
   if (
     !Number.isFinite(
@@ -2128,8 +1548,9 @@ function saveQuestion(e) {
     negativeMarks < 0
   ) {
 
-    alert(
-      'Negative marks cannot be negative.'
+    showExamoraToast(
+      'Negative marks cannot be negative.',
+      'warning'
     );
 
     return;
@@ -2142,41 +1563,43 @@ function saveQuestion(e) {
 
   if (!ex) {
 
-    alert(
-      'Selected examination was not found.'
+    showExamoraToast(
+      'Selected examination was not found.',
+      'error'
     );
 
     return;
   }
 
   /*
-   * IMPORTANT:
    * Do not allow changing questions after
    * the teacher has started the exam.
    */
+
   if (ex.startedAt) {
 
-    alert(
-      'This examination has already started. You cannot add more questions now.'
+    showExamoraToast(
+      'This examination has already started. You cannot add more questions now.',
+      'warning'
     );
 
     return;
   }
 
-  const correctElement =
-    getElement('correct');
-
   const correct =
-    correctElement?.value
-      ?.trim() || '';
+    getElement(
+      'qCorrect'
+    )?.value
+      ?.trim();
 
   if (
     type === 'mcq' &&
     !correct
   ) {
 
-    alert(
-      'Please select the correct MCQ option.'
+    showExamoraToast(
+      'Please select the correct MCQ option.',
+      'warning'
     );
 
     return;
@@ -2187,8 +1610,9 @@ function saveQuestion(e) {
     !correct
   ) {
 
-    alert(
-      'Please select True or False.'
+    showExamoraToast(
+      'Please select True or False.',
+      'warning'
     );
 
     return;
@@ -2199,1326 +1623,482 @@ function saveQuestion(e) {
     !correct
   ) {
 
-    alert(
-      'Please enter the expected numerical answer.'
+    showExamoraToast(
+      'Please enter the expected numerical answer.',
+      'warning'
     );
 
     return;
   }
 
-  const q = {
+  const question = {
+    id: uid('question'),
 
-    id: uid('q'),
+    examId,
 
     type,
 
-    text: questionText,
+    text:
+      questionText,
 
     marks,
 
-    negativeMarks,
+    negativeMarks:
+
+      Number.isFinite(
+        negativeMarks
+      )
+        ? negativeMarks
+        : 0,
 
     correct,
 
-    options:
-      type === 'mcq'
-        ? {
-            A:
-              getElement('a')
-                ?.value
-                .trim() || '',
-
-            B:
-              getElement('b')
-                ?.value
-                .trim() || '',
-
-            C:
-              getElement('c')
-                ?.value
-                .trim() || '',
-
-            D:
-              getElement('d')
-                ?.value
-                .trim() || ''
-          }
-        : null,
-
-    manual:
-      ['short', 'long']
-        .includes(type)
-
+    created:
+      new Date().toISOString()
   };
 
-  if (
-    type === 'mcq' &&
-    (
-      !q.options.A ||
-      !q.options.B ||
-      !q.options.C ||
-      !q.options.D
-    )
-  ) {
-
-    alert(
-      'Please fill all four MCQ options.'
-    );
-
-    return;
-  }
-
-  db.questions.unshift(q);
-
-  ex.questionIds ||= [];
-
-  ex.questionIds.push(
-    q.id
-  );
 
   /*
-   * If questions now exist,
-   * exam becomes READY.
+   * MCQ options
    */
-  ex.status =
-    'ready';
+
+  if (type === 'mcq') {
+
+    const options = {
+      A:
+        getElement('qOptionA')
+          ?.value
+          ?.trim(),
+
+      B:
+        getElement('qOptionB')
+          ?.value
+          ?.trim(),
+
+      C:
+        getElement('qOptionC')
+          ?.value
+          ?.trim(),
+
+      D:
+        getElement('qOptionD')
+          ?.value
+          ?.trim()
+    };
+
+    if (
+      !options.A ||
+      !options.B ||
+      !options.C ||
+      !options.D
+    ) {
+
+      showExamoraToast(
+        'Please fill all four MCQ options.',
+        'warning'
+      );
+
+      return;
+    }
+
+    question.options =
+      options;
+  }
+
+
+  db.questions.push(
+    question
+  );
+
+  if (
+    !Array.isArray(
+      ex.questionIds
+    )
+  ) {
+    ex.questionIds = [];
+  }
+
+  ex.questionIds.push(
+    question.id
+  );
 
   saveDB(db);
 
   logEvent(
-    `Added ${type.toUpperCase()} question to "${ex.title}"`
+    `Added question to examination "${ex.title}"`
   );
 
-  closeQuestionModal();
+  showExamoraToast(
+    'Question added successfully.',
+    'success'
+  );
 
-  renderQuestionBank();
+  renderQuestionList();
 
-  renderExaminerDashboard();
+  clearQuestionForm();
 }
 
 
 /* =========================================================
-   QUESTION BANK
+   QUESTION LIST
    ========================================================= */
 
-function renderQuestionBank() {
-
-  const db = getDB();
-
-  const box =
-    getElement('questionBank');
-
-  if (!box) return;
-
-  if (!db.questions.length) {
-
-    box.innerHTML = `
-      <div class="empty">
-        No questions yet.
-        Add MCQ, True/False, Short Answer,
-        Long Answer or Numerical questions.
-      </div>
-    `;
-
-    return;
-  }
-
-  box.innerHTML = `
-
-    <div class="question-list">
-
-      ${db.questions
-        .map(q => {
-
-          const exam =
-            db.exams.find(
-              e =>
-                e.questionIds?.includes(
-                  q.id
-                )
-            );
-
-          return `
-
-            <div class="question-item">
-
-              <div>
-
-                <div class="q-title">
-                  ${esc(q.text)}
-                </div>
-
-                <div class="q-meta">
-
-                  ${esc(
-                    q.type.toUpperCase()
-                  )}
-
-                  •
-
-                  ${q.marks}
-                  mark(s)
-
-                  •
-
-                  ${
-                    q.negativeMarks > 0
-                      ? `-${q.negativeMarks} negative`
-                      : 'No negative marking'
-                  }
-
-                  •
-
-                  ${
-                    q.manual
-                      ? 'Manual teacher checking'
-                      : 'Automatic marking'
-                  }
-
-                  ${
-                    exam
-                      ? ` • ${esc(exam.title)}`
-                      : ''
-                  }
-
-                </div>
-
-              </div>
-
-              <span
-                class="badge ${
-                  q.manual
-                    ? 'review'
-                    : 'published'
-                }"
-              >
-                ${
-                  q.manual
-                    ? 'Manual'
-                    : 'Auto'
-                }
-              </span>
-
-            </div>
-
-          `;
-
-        })
-        .join('')}
-
-    </div>
-
-  `;
-}
-
-
-/* =========================================================
-   RESULTS
-   ========================================================= */
-
-function renderResults() {
-
-  const db = getDB();
-
-  const box =
-    getElement('resultsTable');
-
-  if (!box) return;
-
-  if (!db.attempts.length) {
-
-    box.innerHTML = `
-      <div class="empty">
-        No student submissions yet.
-        Submitted answer copies will appear
-        here for teacher checking.
-      </div>
-    `;
-
-    return;
-  }
-
-  box.innerHTML = `
-
-    <div
-      class="result-row"
-      style="
-        font-weight:800;
-        color:#667085
-      "
-    >
-
-      <span>
-        Student
-      </span>
-
-      <span>
-        Exam
-      </span>
-
-      <span>
-        Score
-      </span>
-
-      <span>
-        Status
-      </span>
-
-      <span>
-        Action
-      </span>
-
-    </div>
-
-    ${db.attempts
-      .map(a => {
-
-        const ex =
-          db.exams.find(
-            e =>
-              e.id ===
-              a.examId
-          );
-
-        const pending =
-          a.gradingStatus ===
-          'pending';
-
-        return `
-
-          <div class="result-row">
-
-            <div>
-
-              <b>
-                ${esc(a.studentName)}
-              </b>
-
-              <div class="exam-meta">
-                ${esc(a.studentEmail)}
-              </div>
-
-            </div>
-
-            <span>
-              ${esc(
-                ex?.title || '—'
-              )}
-            </span>
-
-            <span>
-
-              <b>
-                ${
-                  Number.isFinite(
-                    Number(a.score)
-                  )
-                    ? a.score
-                    : '—'
-                }
-              </b>
-
-              /
-              ${a.total}
-
-            </span>
-
-            <span
-              class="badge ${
-                pending
-                  ? 'review'
-                  : 'published'
-              }"
-            >
-
-              ${
-                pending
-                  ? 'Needs checking'
-                  : 'Checked'
-              }
-
-            </span>
-
-            <button
-              type="button"
-              class="text-btn"
-              onclick="openGrading('${a.id}')"
-            >
-
-              ${
-                pending
-                  ? 'Check answers'
-                  : 'Review'
-              }
-
-            </button>
-
-          </div>
-
-        `;
-
-      })
-      .join('')}
-
-  `;
-}
-
-
-/* =========================================================
-   OPEN GRADING
-   ========================================================= */
-
-function openGrading(attemptId) {
-
-  const db = getDB();
-
-  const attempt =
-    db.attempts.find(
-      x => x.id === attemptId
+function renderQuestionList() {
+
+  const container =
+    getElement(
+      'questionList'
     );
 
-  if (!attempt) return;
+  if (!container) {
+    return;
+  }
+
+  const examId =
+    getElement('qExam')
+      ?.value;
+
+  if (!examId) {
+
+    container.innerHTML = '';
+
+    return;
+  }
+
+  const db = getDB();
 
   const exam =
     db.exams.find(
-      x =>
-        x.id ===
-        attempt.examId
+      x => x.id === examId
     );
 
-  if (!exam) return;
+  if (!exam) {
 
-  showView('results');
+    container.innerHTML =
+      '<p>Examination not found.</p>';
 
-  const box =
-    getElement('resultsTable');
-
-  if (!box) return;
-
-  const manualCount =
-    attempt.answers.filter(
-      answer => {
-
-        const q =
-          db.questions.find(
-            question =>
-              question.id ===
-              answer.questionId
-          );
-
-        return q?.manual;
-
-      }
-    ).length;
-
-  box.innerHTML = `
-
-    <div class="grading-shell">
-
-      <div class="student-attempts">
-
-        <div class="section-title">
-          <h2>
-            Student submissions
-          </h2>
-        </div>
-
-        ${db.attempts
-          .map(x => {
-
-            const xExam =
-              db.exams.find(
-                e =>
-                  e.id ===
-                  x.examId
-              );
-
-            return `
-
-              <div
-                class="
-                  attempt-card
-                  ${
-                    x.id === attemptId
-                      ? 'selected'
-                      : ''
-                  }
-                "
-                onclick="openGrading('${x.id}')"
-              >
-
-                <b>
-                  ${esc(
-                    x.studentName
-                  )}
-                </b>
-
-                <span>
-                  ${esc(
-                    xExam?.title || ''
-                  )}
-                </span>
-
-                <span>
-                  ${
-                    x.gradingStatus ===
-                    'pending'
-                      ? 'Needs checking'
-                      : 'Checked'
-                  }
-                </span>
-
-              </div>
-
-            `;
-
-          })
-          .join('')}
-
-      </div>
-
-      <div class="grading-card">
-
-        <div class="grading-head">
-
-          <div>
-
-            <div class="eyebrow">
-              ANSWER COPY
-            </div>
-
-            <h2>
-              ${esc(
-                attempt.studentName
-              )}
-              —
-              ${esc(exam.title)}
-            </h2>
-
-            <div class="exam-meta">
-
-              Submitted
-              ${esc(
-                attempt.submittedAt
-              )}
-
-              •
-
-              ${manualCount}
-              subjective question(s)
-
-            </div>
-
-          </div>
-
-          <span
-            class="badge ${
-              attempt.gradingStatus ===
-              'pending'
-                ? 'review'
-                : 'published'
-            }"
-          >
-
-            ${
-              attempt.gradingStatus ===
-              'pending'
-                ? 'Manual review required'
-                : 'Checked'
-            }
-
-          </span>
-
-        </div>
-
-        <div id="gradingQuestions">
-
-          ${attempt.answers
-            .map(
-              (answer, index) =>
-                renderAnswerReview(
-                  answer,
-                  index,
-                  attempt,
-                  db
-                )
-            )
-            .join('')}
-
-        </div>
-
-        <div
-          style="
-            display:flex;
-            justify-content:flex-end;
-            gap:10px;
-            margin-top:20px
-          "
-        >
-
-          <button
-            type="button"
-            class="btn btn-secondary"
-            onclick="renderResults()"
-          >
-            Back to results
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-primary"
-            onclick="saveGrading('${attempt.id}')"
-          >
-            Save Checked Result
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  `;
-}
-
-
-/* =========================================================
-   ANSWER REVIEW
-   ========================================================= */
-
-function renderAnswerReview(
-  answer,
-  index,
-  attempt,
-  db
-) {
-
-  const q =
-    db.questions.find(
-      x =>
-        x.id ===
-        answer.questionId
-    );
-
-  if (!q) return '';
-
-  const automatic =
-    !q.manual;
-
-  let status;
-
-  if (automatic) {
-
-    status =
-      answer.isCorrect
-        ? 'Correct'
-        : 'Incorrect';
-
-  } else {
-
-    status =
-      answer.reviewed
-        ? 'Checked'
-        : 'Teacher checking required';
-
+    return;
   }
 
-  return `
+  const ids =
+    exam.questionIds || [];
 
-    <div
-      class="
-        answer-review
-        ${
-          automatic
-            ? 'auto'
-            : 'manual'
-        }
-      "
-      data-qid="${esc(q.id)}"
-    >
+  const questions =
+    ids
+      .map(
+        id =>
+          db.questions.find(
+            q => q.id === id
+          )
+      )
+      .filter(Boolean);
 
-      <div
-        style="
-          display:flex;
-          justify-content:space-between;
-          gap:10px
-        "
-      >
+  if (!questions.length) {
 
-        <div>
-
-          <span class="review-label">
-
-            Question
-            ${index + 1}
-
-            •
-
-            ${esc(
-              q.type.toUpperCase()
-            )}
-
-            •
-
-            ${q.marks}
-            mark${q.marks == 1 ? '' : 's'}
-
-          </span>
-
-          <h3 style="margin:6px 0">
-            ${esc(q.text)}
-          </h3>
-
-        </div>
-
-        <span
-          class="badge ${
-            automatic
-              ? 'published'
-              : 'review'
-          }"
-        >
-          ${status}
-        </span>
-
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>No questions added yet.</p>
       </div>
+    `;
 
-      <div class="student-answer">
+    return;
+  }
 
-        <b>
-          Student answer:
-        </b>
+  container.innerHTML =
+    questions
+      .map(
+        (q, index) => `
 
-        <br>
+          <div
+            class="question-list-item"
+          >
 
-        ${esc(
-          answer.value ||
-          'No answer'
-        )}
-
-      </div>
-
-      ${
-        automatic
-
-          ? `
-
-            <div class="grading-summary">
-
-              <span>
-                Given marks:
-                <b>
-                  ${q.marks}
-                </b>
-              </span>
-
-              <span>
-                Expected answer:
-                <b>
-                  ${esc(q.correct)}
-                </b>
-              </span>
-
-              <span>
-                Auto score:
-                <b>
-                  ${answer.awarded}
-                </b>
-                /
-                ${q.marks}
-              </span>
-
-            </div>
-
-          `
-
-          : `
-
-            <div class="grading-summary">
-
-              <span>
-                Given marks:
-                <b>
-                  ${q.marks}
-                </b>
-              </span>
-
-              <span>
-                Reference answer / rubric:
-                <b>
-                  ${esc(
-                    q.correct ||
-                    'Teacher judgement'
-                  )}
-                </b>
-              </span>
-
+            <div
+              class="question-number"
+            >
+              ${index + 1}
             </div>
 
             <div
-              class="grading-fields"
-              style="margin-top:12px"
+              class="question-list-content"
             >
 
-              <label>
+              <strong>
+                ${escapeHTML(
+                  q.text
+                )}
+              </strong>
 
-                Marks awarded
-
-                <input
-                  class="manual-mark"
-                  data-qid="${esc(q.id)}"
-                  type="number"
-                  min="0"
-                  max="${q.marks}"
-                  step="0.01"
-                  value="${
-                    answer.awarded ??
-                    0
-                  }"
-                >
-
-              </label>
-
-              <label>
-
-                Teacher feedback
-
-                <textarea
-                  class="manual-feedback"
-                  data-qid="${esc(q.id)}"
-                  rows="2"
-                  placeholder="Optional feedback"
-                >${esc(
-                  answer.feedback ||
-                  ''
-                )}</textarea>
-
-              </label>
+              <span>
+                ${escapeHTML(
+                  q.type
+                )}
+                ·
+                ${escapeHTML(
+                  q.marks
+                )} marks
+              </span>
 
             </div>
 
-          `
-      }
-
-    </div>
-
-  `;
-}
-
-
-/* =========================================================
-   SAVE GRADING
-   ========================================================= */
-
-function saveGrading(attemptId) {
-
-  const db = getDB();
-
-  const attempt =
-    db.attempts.find(
-      x =>
-        x.id === attemptId
-    );
-
-  if (!attempt) return;
-
-  document
-    .querySelectorAll(
-      '.manual-mark'
-    )
-    .forEach(input => {
-
-      const answer =
-        attempt.answers.find(
-          x =>
-            x.questionId ===
-            input.dataset.qid
-        );
-
-      if (!answer) return;
-
-      const max =
-        Number(input.max);
-
-      let value =
-        Number(input.value);
-
-      if (
-        !Number.isFinite(value)
-      ) {
-        value = 0;
-      }
-
-      value =
-        Math.max(
-          0,
-          Math.min(
-            max,
-            value
-          )
-        );
-
-      answer.awarded =
-        value;
-
-      answer.reviewed =
-        true;
-
-      const feedback =
-        document.querySelector(
-          `.manual-feedback[data-qid="${input.dataset.qid}"]`
-        );
-
-      answer.feedback =
-        feedback?.value ||
-        '';
-
-    });
-
-  attempt.score =
-    attempt.answers.reduce(
-      (sum, answer) =>
-        sum +
-        (
-          Number(
-            answer.awarded
-          ) || 0
-        ),
-      0
-    );
-
-  attempt.score =
-    Math.max(
-      0,
-      attempt.score
-    );
-
-  attempt.gradingStatus =
-    'checked';
-
-  attempt.checkedAt =
-    new Date().toLocaleString();
-
-  saveDB(db);
-
-  logEvent(
-    `Checked result for ${attempt.studentName}`
-  );
-
-  renderResults();
-}
-
-
-/* =========================================================
-   AUDIT
-   ========================================================= */
-
-function renderAudit() {
-
-  const db = getDB();
-
-  const box =
-    getElement('auditList');
-
-  if (!box) return;
-
-  box.innerHTML =
-    db.logs.length
-
-      ? db.logs
-          .map(
-            item => `
-
-              <div class="audit-row">
-
-                <b>
-                  ${esc(item.text)}
-                </b>
-
-                <span class="exam-meta">
-                  ${esc(item.time)}
-                </span>
-
-              </div>
-
-            `
-          )
-          .join('')
-
-      : `
-          <div class="empty">
-            No activity recorded.
           </div>
-        `;
-}
 
-
-/* =========================================================
-   STUDENT INITIALIZATION
-   ========================================================= */
-
-function initStudent() {
-
-  setupNav();
-
-  const joinForm =
-    getElement('joinForm');
-
-  if (joinForm) {
-
-    joinForm.addEventListener(
-      'submit',
-      joinExam
-    );
-
-  }
-
-  renderStudentDashboard();
-
-  if (location.hash) {
-
-    const hash =
-      location.hash.slice(1);
-
-    if (
-      document.getElementById(
-        'view-' + hash
+        `
       )
-    ) {
-      showView(hash);
-    }
+      .join('');
+}
 
+
+/* =========================================================
+   CLEAR QUESTION FORM
+   ========================================================= */
+
+function clearQuestionForm() {
+
+  const fields = [
+    'qText',
+    'qMarks',
+    'qNegativeMarks',
+    'qCorrect',
+    'qOptionA',
+    'qOptionB',
+    'qOptionC',
+    'qOptionD'
+  ];
+
+  fields.forEach(
+    id => {
+
+      const element =
+        getElement(id);
+
+      if (element) {
+        element.value = '';
+      }
+    }
+  );
+}
+
+
+/* =========================================================
+   QUESTION TYPE CHANGE
+   ========================================================= */
+
+function updateQuestionType() {
+
+  const type =
+    getElement('qType')
+      ?.value;
+
+  const mcqOptions =
+    getElement(
+      'mcqOptions'
+    );
+
+  if (mcqOptions) {
+
+    mcqOptions.style.display =
+      type === 'mcq'
+        ? ''
+        : 'none';
   }
 }
 
 
 /* =========================================================
-   STUDENT DASHBOARD
+   EXAM RESULTS
    ========================================================= */
 
-function renderStudentDashboard() {
+function viewExamResults(
+  examId
+) {
 
   const db = getDB();
 
-  const box =
-    getElement('studentExamList');
+  const exam =
+    db.exams.find(
+      x => x.id === examId
+    );
 
-  if (box) {
+  if (!exam) {
 
-    const available =
-      db.exams.filter(
-        exam =>
-          formatStatus(exam) !==
-          'completed'
-      );
+    showExamoraToast(
+      'Examination not found.',
+      'error'
+    );
 
-    box.innerHTML =
-      available.length
-
-        ? available
-            .map(exam => {
-
-              const status =
-                formatStatus(exam);
-
-              const qCount =
-                exam.questionIds?.length ||
-                0;
-
-              /*
-               * Students should not see a
-               * waiting room as an active exam.
-               */
-              const joinDisabled =
-                status === 'waiting' ||
-                status === 'ready';
-
-              return `
-
-                <div class="exam-row">
-
-                  <div>
-
-                    <b>
-                      ${esc(
-                        exam.title
-                      )}
-                    </b>
-
-                    <div class="exam-meta">
-
-                      ${esc(
-                        exam.subject
-                      )}
-
-                      •
-                      ${esc(exam.date)}
-
-                      •
-                      ${esc(
-                        exam.startTime
-                      )}
-
-                    </div>
-
-                  </div>
-
-                  <span
-                    class="badge ${status}"
-                  >
-                    ${statusLabel(status)}
-                  </span>
-
-                  <span>
-                    ${exam.duration}
-                    min
-                  </span>
-
-                  <span>
-                    ${qCount}
-                    question${qCount === 1 ? '' : 's'}
-                  </span>
-
-                  ${
-                    joinDisabled
-                      ? `
-                        <span class="exam-meta">
-                          Waiting for examiner
-                        </span>
-                      `
-                      : `
-                        <button
-                          type="button"
-                          class="text-btn"
-                          onclick="
-                            document.getElementById('roomCode').value='${esc(exam.roomCode)}';
-                            showView('join');
-                          "
-                        >
-                          Join
-                        </button>
-                      `
-                  }
-
-                </div>
-
-              `;
-
-            })
-            .join('')
-
-        : `
-
-          <div class="empty">
-            No available examinations.
-            Ask your examiner for the room
-            code and password.
-          </div>
-
-        `;
-
+    return;
   }
-
-  const results =
-    getElement('studentResults');
-
-  if (!results) return;
 
   const attempts =
     db.attempts.filter(
-      a =>
-        a.studentEmail ===
-        'student@example.com'
+      attempt =>
+        attempt.examId ===
+        examId
     );
 
-  results.innerHTML =
-    attempts.length
+  /*
+   * If a results container exists,
+   * render the results there.
+   */
 
-      ? attempts
-          .map(attempt => {
+  const container =
+    getElement(
+      'examResults'
+    );
 
-            const exam =
-              db.exams.find(
-                e =>
-                  e.id ===
-                  attempt.examId
-              );
+  if (!container) {
 
-            const checked =
-              attempt.gradingStatus ===
-              'checked';
+    showExamoraToast(
+      `${attempts.length} student attempt(s) found for "${exam.title}".`,
+      'info'
+    );
 
-            return `
+    return;
+  }
 
-              <div class="exam-row">
+  if (!attempts.length) {
 
-                <div>
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>No submissions yet</h3>
+        <p>No student has submitted this examination.</p>
+      </div>
+    `;
 
-                  <b>
-                    ${esc(
-                      exam?.title ||
-                      'Exam'
-                    )}
-                  </b>
+    return;
+  }
 
-                  <div class="exam-meta">
-                    ${esc(
-                      attempt.submittedAt
-                    )}
-                  </div>
+  container.innerHTML =
+    attempts
+      .map(
+        attempt => `
 
-                </div>
+          <div class="result-card">
 
-                <span>
-                  ${
-                    checked
-                      ? `${attempt.score}/${attempt.total}`
-                      : 'Under review'
-                  }
-                </span>
+            <div>
+              <strong>
+                ${escapeHTML(
+                  attempt.studentName ||
+                  attempt.email ||
+                  'Student'
+                )}
+              </strong>
 
-                <span
-                  class="badge ${
-                    checked
-                      ? 'published'
-                      : 'review'
-                  }"
-                >
-                  ${
-                    checked
-                      ? 'Checked'
-                      : 'Under review'
-                  }
-                </span>
+              <span>
+                ${escapeHTML(
+                  attempt.email ||
+                  ''
+                )}
+              </span>
+            </div>
 
-              </div>
+            <div>
+              <strong>
+                ${escapeHTML(
+                  attempt.score ??
+                  0
+                )}
+              </strong>
 
-            `;
+              <span>
+                Score
+              </span>
+            </div>
 
-          })
-          .join('')
+            <div>
+              <strong>
+                ${escapeHTML(
+                  formatDateTime(
+                    attempt.submittedAt
+                  )
+                )}
+              </strong>
 
-      : `
+              <span>
+                Submitted
+              </span>
+            </div>
 
-          <div class="empty">
-            No results yet.
           </div>
 
-        `;
+        `
+      )
+      .join('');
 }
 
 
 /* =========================================================
-   JOIN EXAM
+   STUDENT ACCESS
    ========================================================= */
 
-function joinExam(e) {
-
-  e.preventDefault();
-
-  const db = getDB();
+function joinExam() {
 
   const roomCode =
     getElement('roomCode')
       ?.value
-      .trim()
+      ?.trim()
       .toUpperCase();
 
   const roomPassword =
     getElement('roomPassword')
       ?.value
-      .trim();
+      ?.trim();
 
-  const message =
-    getElement('joinMessage');
+  if (
+    !roomCode ||
+    !roomPassword
+  ) {
+
+    showExamoraToast(
+      'Please enter the room code and password.',
+      'warning'
+    );
+
+    return;
+  }
+
+  const db = getDB();
 
   const exam =
     db.exams.find(
       x =>
         String(
-          x.roomCode
-        ).toUpperCase() ===
-        roomCode
+          x.roomCode || ''
+        )
+          .toUpperCase() ===
+          roomCode
     );
 
+  if (!exam) {
+
+    showExamoraToast(
+      'Examination room not found.',
+      'error'
+    );
+
+    return;
+  }
+
   if (
-    !exam ||
     exam.roomPassword !==
-      roomPassword
+    roomPassword
   ) {
 
-    if (message) {
-
-      message.innerHTML = `
-        <div
-          class="notice"
-          style="
-            background:#fff0f1;
-            color:#a73542
-          "
-        >
-          Room code or password is incorrect.
-        </div>
-      `;
-
-    }
+    showExamoraToast(
+      'Incorrect room password.',
+      'error'
+    );
 
     return;
   }
 
-  const status =
-    formatStatus(exam);
+  if (!exam.startedAt) {
 
-  if (
-    status === 'waiting' ||
-    status === 'ready'
-  ) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice">
-          The examiner has not started this
-          examination yet.
-          Please wait until the teacher starts it.
-        </div>
-      `;
-
-    }
-
-    return;
-  }
-
-  if (status === 'completed') {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice">
-          This examination has already ended.
-        </div>
-      `;
-
-    }
-
-    return;
-  }
-
-  if (
-    !exam.questionIds ||
-    !exam.questionIds.length
-  ) {
-
-    if (message) {
-
-      message.innerHTML = `
-        <div class="notice">
-          This room has no questions yet.
-          Ask your examiner to add questions.
-        </div>
-      `;
-
-    }
+    showExamoraToast(
+      'The examiner has not started this examination yet.',
+      'warning'
+    );
 
     return;
   }
@@ -3528,1034 +2108,1127 @@ function joinExam(e) {
     exam.id
   );
 
-  sessionStorage.setItem(
-    'examora_student',
-    'Demo Student'
-  );
-
-  sessionStorage.removeItem(
-    'examora_answers'
-  );
-
-  sessionStorage.removeItem(
-    'examora_reviews'
-  );
-
   location.href =
     'exam.html';
+}
+   /* =========================================================
+   STUDENT EXAM INITIALIZATION
+   ========================================================= */
+
+function initializeStudentPage() {
+
+  const user =
+    getCurrentUser();
+
+  if (!user) {
+    return;
+  }
+
+  const joinForm =
+    getElement('joinExamForm');
+
+  if (joinForm) {
+
+    joinForm.addEventListener(
+      'submit',
+      event => {
+        event.preventDefault();
+
+        joinExam();
+      }
+    );
+  }
+
+  renderStudentDashboard();
 }
 
 
 /* =========================================================
-   LIVE EXAM
+   STUDENT DASHBOARD
    ========================================================= */
 
-function initLiveExam() {
+function renderStudentDashboard() {
 
-  restoreTheme();
+  const container =
+    getElement(
+      'studentExamList'
+    );
+
+  if (!container) {
+    return;
+  }
+
+  const user =
+    getCurrentUser();
+
+  if (!user) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>Please login first</h3>
+      </div>
+    `;
+
+    return;
+  }
+
+  const db = getDB();
+
+  const attempts =
+    db.attempts.filter(
+      attempt =>
+        attempt.studentId ===
+        user.id ||
+        String(
+          attempt.email || ''
+        )
+          .toLowerCase() ===
+          String(
+            user.email || ''
+          )
+            .toLowerCase()
+    );
+
+  if (!attempts.length) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <h3>No examination history</h3>
+        <p>Your completed examinations will appear here.</p>
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML =
+    attempts
+      .map(
+        attempt => {
+
+          const exam =
+            db.exams.find(
+              x =>
+                x.id ===
+                attempt.examId
+            );
+
+          return `
+            <div class="student-exam-card">
+
+              <div>
+                <h3>
+                  ${escapeHTML(
+                    exam?.title ||
+                    'Examination'
+                  )}
+                </h3>
+
+                <p>
+                  ${escapeHTML(
+                    exam?.subject ||
+                    ''
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <strong>
+                  ${escapeHTML(
+                    attempt.score ??
+                    0
+                  )}
+                </strong>
+
+                <span>
+                  Score
+                </span>
+              </div>
+
+              <div>
+                <span>
+                  ${escapeHTML(
+                    formatDateTime(
+                      attempt.submittedAt
+                    )
+                  )}
+                </span>
+              </div>
+
+            </div>
+          `;
+        }
+      )
+      .join('');
+}
+
+
+/* =========================================================
+   COPY ROOM CREDENTIALS
+   ========================================================= */
+
+async function copyRoomCredentials(
+  examId
+) {
+
+  const db = getDB();
+
+  const exam =
+    db.exams.find(
+      x => x.id === examId
+    );
+
+  if (!exam) {
+
+    showExamoraToast(
+      'Examination not found.',
+      'error'
+    );
+
+    return;
+  }
+
+  const text =
+    `Examora Examination\n` +
+    `Exam: ${exam.title}\n` +
+    `Room: ${exam.roomCode}\n` +
+    `Password: ${exam.roomPassword}`;
+
+  try {
+
+    await navigator.clipboard.writeText(
+      text
+    );
+
+    showExamoraToast(
+      'Room credentials copied.',
+      'info'
+    );
+
+  } catch (error) {
+
+    showExamoraToast(
+      'Unable to copy room credentials.',
+      'error'
+    );
+  }
+}
+
+
+/* =========================================================
+   EXAM PAGE
+   ========================================================= */
+
+function initializeExamPage() {
 
   const examId =
     sessionStorage.getItem(
       'examora_current_exam'
     );
 
-  const db = getDB();
+  if (!examId) {
 
-  const exam =
-    db.exams.find(
-      e =>
-        e.id === examId
+    showExamoraToast(
+      'No examination has been selected.',
+      'warning'
     );
-
-  if (!exam) {
-
-    location.href =
-      'student.html';
 
     return;
   }
 
-  /*
-   * IMPORTANT:
-   * If teacher has not started exam,
-   * student cannot enter.
-   */
-  if (!exam.startedAt) {
+  initializeExamSession(
+    examId
+  );
+}
 
-    alert(
-      'The examiner has not started this examination yet.'
+
+/* =========================================================
+   EXAM SESSION
+   ========================================================= */
+
+function initializeExamSession(
+  examId
+) {
+
+  const db = getDB();
+
+  const exam =
+    db.exams.find(
+      x => x.id === examId
     );
 
-    location.href =
-      'student.html';
+  if (!exam) {
+
+    showExamoraToast(
+      'Examination not found.',
+      'error'
+    );
+
+    return;
+  }
+
+  if (!exam.startedAt) {
+
+    showExamoraToast(
+      'This examination has not started yet.',
+      'warning'
+    );
+
+    return;
+  }
+
+  const questionIds =
+    Array.isArray(
+      exam.questionIds
+    )
+      ? exam.questionIds
+      : [];
+
+  if (!questionIds.length) {
+
+    showExamoraToast(
+      'This examination has no questions.',
+      'error'
+    );
 
     return;
   }
 
   const questions =
-    (exam.questionIds || [])
+    questionIds
       .map(
-        questionId =>
+        id =>
           db.questions.find(
-            q =>
-              q.id === questionId
+            q => q.id === id
           )
       )
       .filter(Boolean);
 
   if (!questions.length) {
 
-    alert(
-      'This examination does not contain any questions.'
+    showExamoraToast(
+      'Unable to load examination questions.',
+      'error'
     );
-
-    location.href =
-      'student.html';
 
     return;
   }
 
-  /*
-   * REAL START TIME
-   */
-  const actualStart =
-    getExamStartTime(exam);
+  const user =
+    getCurrentUser();
 
-  /*
-   * REAL END TIME
-   */
-  const actualEnd =
-    getExamEndTime(exam);
+  const state = {
+    exam,
+    questions,
+    currentIndex: 0,
+    answers: {},
+    submitted: false,
+    startedAt:
+      new Date().toISOString()
+  };
 
-  const now =
-    Date.now();
+  window.examoraExamState =
+    state;
 
-  if (
-    Number.isNaN(actualStart) ||
-    Number.isNaN(actualEnd)
-  ) {
+  renderExamHeader(
+    exam
+  );
 
-    alert(
-      'This examination has an invalid start time.'
-    );
+  renderExamQuestion();
 
-    location.href =
-      'student.html';
+  startExamTimer(
+    exam
+  );
+}
 
-    return;
-  }
 
-  /*
-   * Late joining is allowed.
-   *
-   * Example:
-   * Teacher starts at 10:00
-   * Duration = 60 minutes
-   *
-   * Student joins at 10:25
-   * Remaining time = 35 minutes.
-   */
-  if (now >= actualEnd) {
+/* =========================================================
+   EXAM HEADER
+   ========================================================= */
 
-    alert(
-      'This examination has already ended.'
-    );
-
-    location.href =
-      'student.html';
-
-    return;
-  }
-
-  let index = 0;
-
-  let submitted = false;
-
-  let answers =
-    JSON.parse(
-      sessionStorage.getItem(
-        'examora_answers'
-      ) || '{}'
-    );
-
-  let reviews =
-    JSON.parse(
-      sessionStorage.getItem(
-        'examora_reviews'
-      ) || '{}'
-    );
+function renderExamHeader(
+  exam
+) {
 
   const title =
-    getElement('liveExamTitle');
+    getElement(
+      'examTitleDisplay'
+    );
 
   if (title) {
     title.textContent =
-      exam.title;
+      exam.title || 'Examination';
   }
 
-
-  /* =======================================================
-     SAVE PROGRESS
-     ======================================================= */
-
-  function saveProgress() {
-
-    sessionStorage.setItem(
-      'examora_answers',
-      JSON.stringify(answers)
+  const subject =
+    getElement(
+      'examSubjectDisplay'
     );
 
-    const state =
-      getElement('saveState');
-
-    if (state) {
-      state.textContent =
-        'Saved ✓';
-    }
-
+  if (subject) {
+    subject.textContent =
+      exam.subject || '';
   }
 
-
-  /* =======================================================
-     RENDER QUESTION
-     ======================================================= */
-
-  function render() {
-
-    const question =
-      questions[index];
-
-    if (!question) return;
-
-    const number =
-      getElement('questionNumber');
-
-    if (number) {
-
-      number.textContent =
-        `Question ${index + 1}`;
-
-    }
-
-    const marks =
-      getElement('questionMarks');
-
-    if (marks) {
-
-      marks.textContent =
-        `${question.marks} mark${
-          question.marks == 1
-            ? ''
-            : 's'
-        }`;
-
-    }
-
-    const text =
-      getElement('questionText');
-
-    if (text) {
-
-      text.textContent =
-        question.text;
-
-    }
-
-    const progress =
-      getElement('progressText');
-
-    if (progress) {
-
-      progress.textContent =
-        `${index + 1} / ${questions.length}`;
-
-    }
-
-    const value =
-      answers[
-        question.id
-      ] ?? '';
-
-    let html = '';
-
-
-    /* MCQ */
-
-    if (
-      question.type ===
-      'mcq'
-    ) {
-
-      html = `
-
-        <div class="answer-options">
-
-          ${['A', 'B', 'C', 'D']
-            .map(letter => `
-
-              <label
-                class="
-                  answer-option
-                  ${
-                    value === letter
-                      ? 'selected'
-                      : ''
-                  }
-                "
-              >
-
-                <input
-                  type="radio"
-                  name="ans"
-                  value="${letter}"
-                  ${
-                    value === letter
-                      ? 'checked'
-                      : ''
-                  }
-                >
-
-                <b>
-                  ${letter}.
-                </b>
-
-                ${esc(
-                  question
-                    .options?.[letter] ||
-                  ''
-                )}
-
-              </label>
-
-            `)
-            .join('')}
-
-        </div>
-
-      `;
-
-    }
-
-
-    /* TRUE / FALSE */
-
-    else if (
-      question.type ===
-      'truefalse'
-    ) {
-
-      html = `
-
-        <div class="answer-options">
-
-          ${[
-            'True',
-            'False'
-          ]
-            .map(answerValue => `
-
-              <label
-                class="
-                  answer-option
-                  ${
-                    value === answerValue
-                      ? 'selected'
-                      : ''
-                  }
-                "
-              >
-
-                <input
-                  type="radio"
-                  name="ans"
-                  value="${answerValue}"
-                  ${
-                    value === answerValue
-                      ? 'checked'
-                      : ''
-                  }
-                >
-
-                ${answerValue}
-
-              </label>
-
-            `)
-            .join('')}
-
-        </div>
-
-      `;
-
-    }
-
-
-    /* NUMERICAL */
-
-    else if (
-      question.type ===
-      'numerical'
-    ) {
-
-      html = `
-
-        <input
-          id="textAnswer"
-          type="number"
-          step="any"
-          placeholder="Enter your numerical answer..."
-          value="${esc(value)}"
-        >
-
-      `;
-
-    }
-
-
-    /* SHORT / LONG */
-
-    else {
-
-      html = `
-
-        <textarea
-          id="textAnswer"
-          rows="8"
-          placeholder="Write your answer here..."
-        >${esc(value)}</textarea>
-
-      `;
-
-    }
-
-    const answerArea =
-      getElement('answerArea');
-
-    if (answerArea) {
-
-      answerArea.innerHTML =
-        html;
-
-    }
-
-
-    /*
-     * Radio events
-     */
-    document
-      .querySelectorAll(
-        'input[name="ans"]'
-      )
-      .forEach(radio => {
-
-        radio.addEventListener(
-          'change',
-          () => {
-
-            answers[
-              question.id
-            ] =
-              radio.value;
-
-            saveProgress();
-
-            render();
-
-          }
-        );
-
-      });
-
-
-    /*
-     * Text/numerical events
-     */
-    getElement('textAnswer')
-      ?.addEventListener(
-        'input',
-        event => {
-
-          answers[
-            question.id
-          ] =
-            event.target.value;
-
-          saveProgress();
-
-          updateAnsweredCount();
-
-        }
-      );
-
-
-    updateAnsweredCount();
-
-
-    /* Review button */
-
-    const reviewButton =
-      getElement('reviewButton');
-
-    if (reviewButton) {
-
-      const marked =
-        !!reviews[
-          question.id
-        ];
-
-      reviewButton.classList.toggle(
-        'active',
-        marked
-      );
-
-      reviewButton.textContent =
-        marked
-          ? '★ Marked for review'
-          : '☆ Mark for review';
-
-    }
-
-
-    /* Question navigation */
-
-    const navGrid =
-      getElement(
-        'questionNavGrid'
-      );
-
-    if (navGrid) {
-
-      navGrid.innerHTML =
-        questions
-          .map(
-            (q, i) => `
-
-              <button
-                type="button"
-                class="
-                  ${
-                    String(
-                      answers[q.id] ?? ''
-                    ).trim()
-                      ? 'answered'
-                      : ''
-                  }
-
-                  ${
-                    reviews[q.id]
-                      ? 'review'
-                      : ''
-                  }
-                "
-                onclick="window.examGo(${i})"
-              >
-                ${i + 1}
-              </button>
-
-            `
-          )
-          .join('');
-
-    }
-
+  const room =
+    getElement(
+      'examRoomDisplay'
+    );
+
+  if (room) {
+    room.textContent =
+      exam.roomCode || '';
   }
 
+  const duration =
+    getElement(
+      'examDurationDisplay'
+    );
 
-  /* =======================================================
-     ANSWER COUNT
-     ======================================================= */
+  if (duration) {
+    duration.textContent =
+      `${exam.duration} minutes`;
+  }
+}
 
-  function updateAnsweredCount() {
 
-    const answeredCount =
-      getElement(
-        'answeredCount'
-      );
+/* =========================================================
+   RENDER CURRENT QUESTION
+   ========================================================= */
 
-    if (!answeredCount) {
-      return;
-    }
+function renderExamQuestion() {
 
-    answeredCount.textContent =
-      Object.values(
-        answers
-      ).filter(
-        value =>
-          String(
-            value
-          ).trim() !== ''
-      ).length;
+  const state =
+    window.examoraExamState;
 
+  if (!state) {
+    return;
   }
 
+  const question =
+    state.questions[
+      state.currentIndex
+    ];
 
-  /* =======================================================
-     EXAM NAVIGATION
-     ======================================================= */
+  if (!question) {
+    return;
+  }
 
-  window.examGo =
-    questionIndex => {
+  const questionNumber =
+    getElement(
+      'questionNumber'
+    );
 
-      saveProgress();
+  if (questionNumber) {
 
-      if (
-        questionIndex < 0 ||
-        questionIndex >=
-          questions.length
-      ) {
-        return;
-      }
+    questionNumber.textContent =
+      `Question ${
+        state.currentIndex + 1
+      } of ${
+        state.questions.length
+      }`;
+  }
 
-      index =
-        questionIndex;
+  const questionText =
+    getElement(
+      'questionText'
+    );
 
-      render();
-    };
+  if (questionText) {
 
-  window.previousQuestion =
-    () => {
+    questionText.textContent =
+      question.text || '';
+  }
 
-      saveProgress();
+  const marks =
+    getElement(
+      'questionMarks'
+    );
 
-      if (index > 0) {
+  if (marks) {
 
-        index--;
+    marks.textContent =
+      `${question.marks || 0} marks`;
+  }
 
-        render();
+  const optionsContainer =
+    getElement(
+      'questionOptions'
+    );
 
-      }
+  if (!optionsContainer) {
+    return;
+  }
 
-    };
+  const savedAnswer =
+    state.answers[
+      question.id
+    ];
 
-  window.nextQuestion =
-    () => {
-
-      saveProgress();
-
-      if (
-        index <
-        questions.length - 1
-      ) {
-
-        index++;
-
-        render();
-
-      }
-
-    };
-
-  window.toggleReview =
-    () => {
-
-      const id =
-        questions[index].id;
-
-      reviews[id] =
-        !reviews[id];
-
-      sessionStorage.setItem(
-        'examora_reviews',
-        JSON.stringify(
-          reviews
-        )
-      );
-
-      render();
-
-    };
-
-
-  /* =======================================================
-     SUBMIT EXAM
-     ======================================================= */
-
-  function submitExamInternal(
-    automatic = false
+  if (
+    question.type ===
+    'mcq'
   ) {
 
-    if (submitted) {
-      return;
-    }
+    const options =
+      question.options ||
+      {};
 
-    submitted = true;
+    optionsContainer.innerHTML =
+      Object.entries(
+        options
+      )
+        .map(
+          ([key, value]) => `
 
-    saveProgress();
+            <label
+              class="exam-option"
+            >
 
-    const attempt = {
+              <input
+                type="radio"
+                name="answer"
+                value="${escapeHTML(
+                  key
+                )}"
+                ${
+                  savedAnswer ===
+                  key
+                    ? 'checked'
+                    : ''
+                }
+              >
 
-      id:
-        uid('attempt'),
+              <span>
+                <strong>
+                  ${escapeHTML(
+                    key
+                  )}.
+                </strong>
 
-      examId:
-        exam.id,
+                ${escapeHTML(
+                  value
+                )}
+              </span>
 
-      studentName:
-        sessionStorage.getItem(
-          'examora_student'
-        ) ||
-        'Demo Student',
+            </label>
 
-      studentEmail:
-        'student@example.com',
+          `
+        )
+        .join('');
 
-      submittedAt:
-        new Date().toLocaleString(),
+  } else if (
+    question.type ===
+    'truefalse'
+  ) {
 
-      total:
-        questions.reduce(
-          (sum, q) =>
-            sum +
-            Number(q.marks),
-          0
-        ),
+    optionsContainer.innerHTML = `
+      <label class="exam-option">
 
-      score: 0,
-
-      gradingStatus:
-        'checked',
-
-      answers: []
-
-    };
-
-
-    attempt.answers =
-      questions.map(
-        question => {
-
-          const value =
-            answers[
-              question.id
-            ] ?? '';
-
-          const cleanValue =
-            String(
-              value
-            ).trim();
-
-          let correct =
-            false;
-
-          let awarded =
-            0;
-
-
-          /* MCQ */
-
-          if (
-            question.type ===
-            'mcq'
-          ) {
-
-            correct =
-              cleanValue
-                .toUpperCase() ===
-              String(
-                question.correct
-              )
-                .trim()
-                .toUpperCase();
-
+        <input
+          type="radio"
+          name="answer"
+          value="True"
+          ${
+            savedAnswer ===
+            'True'
+              ? 'checked'
+              : ''
           }
+        >
 
+        <span>True</span>
 
-          /* TRUE / FALSE */
+      </label>
 
-          else if (
-            question.type ===
-            'truefalse'
-          ) {
+      <label class="exam-option">
 
-            correct =
-              cleanValue
-                .toLowerCase() ===
-              String(
-                question.correct
-              )
-                .trim()
-                .toLowerCase();
-
+        <input
+          type="radio"
+          name="answer"
+          value="False"
+          ${
+            savedAnswer ===
+            'False'
+              ? 'checked'
+              : ''
           }
+        >
+
+        <span>False</span>
+
+      </label>
+    `;
+
+  } else {
+
+    optionsContainer.innerHTML = `
+      <input
+        id="answerInput"
+        class="exam-answer-input"
+        type="${
+          question.type ===
+          'numerical'
+            ? 'number'
+            : 'text'
+        }"
+        value="${escapeHTML(
+          savedAnswer || ''
+        )}"
+        placeholder="Enter your answer"
+      >
+    `;
+  }
+}
 
 
-          /* NUMERICAL */
+/* =========================================================
+   SAVE CURRENT ANSWER
+   ========================================================= */
 
-          else if (
-            question.type ===
-            'numerical'
-          ) {
+function saveCurrentAnswer() {
 
-            const studentNumber =
-              Number(
-                cleanValue
-              );
+  const state =
+    window.examoraExamState;
 
-            const expectedNumber =
-              Number(
-                question.correct
-              );
-
-            correct =
-              cleanValue !== '' &&
-              Number.isFinite(
-                studentNumber
-              ) &&
-              Number.isFinite(
-                expectedNumber
-              ) &&
-              Math.abs(
-                studentNumber -
-                expectedNumber
-              ) < 0.01;
-
-          }
-
-
-          /* AUTOMATIC MARKING */
-
-          if (!question.manual) {
-
-            if (correct) {
-
-              awarded =
-                Number(
-                  question.marks
-                );
-
-            }
-
-            else if (
-              cleanValue !== '' &&
-              Number(
-                question.negativeMarks
-              ) > 0
-            ) {
-
-              awarded =
-                -Number(
-                  question.negativeMarks
-                );
-
-            }
-
-          }
-
-
-          return {
-
-            questionId:
-              question.id,
-
-            value:
-              cleanValue,
-
-            isCorrect:
-              correct,
-
-            awarded,
-
-            reviewed:
-              !question.manual,
-
-            feedback:
-              ''
-
-          };
-
-        }
-      );
-
-
-    const hasManual =
-      attempt.answers.some(
-        answer => {
-
-          const question =
-            db.questions.find(
-              q =>
-                q.id ===
-                answer.questionId
-            );
-
-          return !!question?.manual;
-
-        }
-      );
-
-
-    if (hasManual) {
-
-      attempt.gradingStatus =
-        'pending';
-
-    }
-
-
-    attempt.score =
-      attempt.answers.reduce(
-        (sum, answer) =>
-          sum +
-          Number(
-            answer.awarded || 0
-          ),
-        0
-      );
-
-    /*
-     * Score cannot go below zero.
-     */
-    attempt.score =
-      Math.max(
-        0,
-        attempt.score
-      );
-
-
-    db.attempts.push(
-      attempt
-    );
-
-    saveDB(db);
-
-    logEvent(
-      `Student submitted "${exam.title}"${
-        automatic
-          ? ' automatically after time expired'
-          : ''
-      }`
-    );
-
-    sessionStorage.removeItem(
-      'examora_answers'
-    );
-
-    sessionStorage.removeItem(
-      'examora_reviews'
-    );
-
-    sessionStorage.setItem(
-      'examora_last_attempt',
-      attempt.id
-    );
-
-    location.href =
-      'result.html';
+  if (!state) {
+    return;
   }
 
+  const question =
+    state.questions[
+      state.currentIndex
+    ];
 
-  window.submitExam =
-    () => {
+  if (!question) {
+    return;
+  }
 
-      if (submitted) {
-        return;
-      }
+  let answer = '';
 
-      if (
-        !confirm(
-          'Submit your examination? You will not be able to change answers after submission.'
-        )
-      ) {
-        return;
-      }
+  const selected =
+    document.querySelector(
+      'input[name="answer"]:checked'
+    );
 
-      submitExamInternal(
-        false
+  if (selected) {
+
+    answer =
+      selected.value;
+
+  } else {
+
+    const input =
+      getElement(
+        'answerInput'
       );
 
-    };
+    if (input) {
+      answer =
+        input.value;
+    }
+  }
+
+  state.answers[
+    question.id
+  ] = answer;
+}
 
 
-  /* =======================================================
-     TIMER
-     ======================================================= */
+/* =========================================================
+   NEXT QUESTION
+   ========================================================= */
+
+function nextQuestion() {
+
+  const state =
+    window.examoraExamState;
+
+  if (!state) {
+    return;
+  }
+
+  saveCurrentAnswer();
+
+  if (
+    state.currentIndex >=
+    state.questions.length - 1
+  ) {
+
+    showExamoraToast(
+      'This is the last question. Please submit the examination when you are ready.',
+      'info'
+    );
+
+    return;
+  }
+
+  state.currentIndex++;
+
+  renderExamQuestion();
+}
+
+
+/* =========================================================
+   PREVIOUS QUESTION
+   ========================================================= */
+
+function previousQuestion() {
+
+  const state =
+    window.examoraExamState;
+
+  if (!state) {
+    return;
+  }
+
+  saveCurrentAnswer();
+
+  if (
+    state.currentIndex <=
+    0
+  ) {
+
+    showExamoraToast(
+      'You are already on the first question.',
+      'info'
+    );
+
+    return;
+  }
+
+  state.currentIndex--;
+
+  renderExamQuestion();
+}
+
+
+/* =========================================================
+   QUESTION NAVIGATION
+   ========================================================= */
+
+function goToQuestion(
+  index
+) {
+
+  const state =
+    window.examoraExamState;
+
+  if (!state) {
+    return;
+  }
+
+  if (
+    index < 0 ||
+    index >=
+      state.questions.length
+  ) {
+    return;
+  }
+
+  saveCurrentAnswer();
+
+  state.currentIndex =
+    index;
+
+  renderExamQuestion();
+}
+
+
+/* =========================================================
+   EXAM TIMER
+   ========================================================= */
+
+function startExamTimer(
+  exam
+) {
+
+  const timerElement =
+    getElement(
+      'examTimer'
+    );
+
+  if (!timerElement) {
+    return;
+  }
+
+  const startedAt =
+    new Date(
+      exam.startedAt
+    ).getTime();
+
+  const duration =
+    Number(
+      exam.duration
+    ) || 0;
+
+  const endTime =
+    startedAt +
+    duration *
+      60 *
+      1000;
 
   let timerFinished =
     false;
 
   function tick() {
 
-    if (submitted) {
-      return;
-    }
-
-    /*
-     * IMPORTANT:
-     * Timer uses actual teacher start time.
-     *
-     * Therefore late students get less time.
-     */
     const remaining =
       Math.max(
         0,
-        actualEnd -
+        endTime -
           Date.now()
       );
 
-    const timer =
-      getElement('timer');
-
-    if (timer) {
-
-      timer.textContent =
-        formatRemainingTime(
-          remaining
-        );
-
-    }
-
-    /*
-     * Optional warning state.
-     */
-    if (timer) {
-
-      timer.classList.toggle(
-        'warning',
-        remaining <= 5 * 60000
+    const totalSeconds =
+      Math.floor(
+        remaining / 1000
       );
 
-      timer.classList.toggle(
-        'danger',
-        remaining <= 60000
+    const minutes =
+      Math.floor(
+        totalSeconds / 60
       );
 
-    }
+    const seconds =
+      totalSeconds % 60;
+
+    timerElement.textContent =
+      `${String(
+        minutes
+      ).padStart(
+        2,
+        '0'
+      )}:${String(
+        seconds
+      ).padStart(
+        2,
+        '0'
+      )}`;
 
     if (
-      remaining <= 0
+      remaining <= 0 &&
+      !timerFinished
     ) {
 
-      if (!timerFinished) {
+      timerFinished =
+        true;
 
-        timerFinished =
-          true;
+      clearInterval(
+        interval
+      );
 
-        alert(
-          'Time is over. Your examination will be submitted automatically.'
-        );
+      showExamoraToast(
+        'Time is up. Your examination will be submitted automatically.',
+        'warning',
+        'Time Up'
+      );
 
-        submitExamInternal(
-          true
-        );
-
-      }
-
-      return;
+      setTimeout(
+        () => {
+          submitExamInternal(
+            true
+          );
+        },
+        700
+      );
     }
+  }
 
-    setTimeout(
+  tick();
+
+  const interval =
+    setInterval(
       tick,
       1000
     );
+}
+
+
+/* =========================================================
+   SUBMIT EXAM
+   ========================================================= */
+
+function submitExam() {
+
+  const state =
+    window.examoraExamState;
+
+  if (!state) {
+    return;
   }
 
+  if (state.submitted) {
+    return;
+  }
+
+  saveCurrentAnswer();
+
+  if (
+    !confirm(
+      'Submit your examination? You will not be able to change answers after submission.'
+    )
+  ) {
+    return;
+  }
+
+  submitExamInternal(
+    false
+  );
+}
+
+
+/* =========================================================
+   SUBMIT EXAM INTERNAL
+   ========================================================= */
+
+function submitExamInternal(
+  automatic = false
+) {
+
+  const state =
+    window.examoraExamState;
+
+  if (!state) {
+    return;
+  }
+
+  if (state.submitted) {
+    return;
+  }
+
+  state.submitted =
+    true;
+
+  saveCurrentAnswer();
+
+  const db = getDB();
+
+  const user =
+    getCurrentUser();
+
+  const exam =
+    state.exam;
+
+  let score = 0;
+
+  let totalMarks = 0;
+
+  let correctCount = 0;
+
+  let incorrectCount = 0;
+
+  let unansweredCount = 0;
+
+  const answerDetails = [];
+
+  state.questions.forEach(
+    question => {
+
+      const answer =
+        state.answers[
+          question.id
+        ];
+
+      const hasAnswer =
+        answer !== undefined &&
+        answer !== null &&
+        String(answer)
+          .trim() !== '';
+
+      totalMarks +=
+        Number(
+          question.marks
+        ) || 0;
+
+      if (!hasAnswer) {
+
+        unansweredCount++;
+
+        answerDetails.push({
+          questionId:
+            question.id,
+
+          answer:
+            '',
+
+          correct:
+            false,
+
+          unanswered:
+            true,
+
+          marks:
+            0
+        });
+
+        return;
+      }
+
+      const correctAnswer =
+        String(
+          question.correct ??
+          ''
+        )
+          .trim()
+          .toLowerCase();
+
+      const studentAnswer =
+        String(answer)
+          .trim()
+          .toLowerCase();
+
+      const isCorrect =
+        studentAnswer ===
+        correctAnswer;
+
+      if (isCorrect) {
+
+        score +=
+          Number(
+            question.marks
+          ) || 0;
+
+        correctCount++;
+
+      } else {
+
+        incorrectCount++;
+
+        if (
+          exam.negative
+        ) {
+
+          score -=
+            Number(
+              question.negativeMarks ||
+              exam.negativeMarks ||
+              0
+            );
+        }
+      }
+
+      answerDetails.push({
+
+        questionId:
+          question.id,
+
+        answer,
+
+        correct:
+          isCorrect,
+
+        unanswered:
+          false,
+
+        marks:
+          isCorrect
+            ? Number(
+                question.marks
+              ) || 0
+            : 0
+
+      });
+    }
+  );
 
   /*
-   * Initial render + timer.
+   * Prevent score from becoming negative.
    */
-  render();
 
-  tick();
+  score =
+    Math.max(
+      0,
+      score
+    );
+
+  const attempt = {
+
+    id:
+      uid('attempt'),
+
+    examId:
+      exam.id,
+
+    studentId:
+      user?.id ||
+      null,
+
+    studentName:
+      user?.name ||
+      '',
+
+    email:
+      user?.email ||
+      '',
+
+    score,
+
+    totalMarks,
+
+    correctCount,
+
+    incorrectCount,
+
+    unansweredCount,
+
+    answers:
+      answerDetails,
+
+    submittedAt:
+      new Date().toISOString(),
+
+    automatic
+
+  };
+
+  db.attempts.push(
+    attempt
+  );
+
+  saveDB(db);
+
+  logEvent(
+    `Submitted examination "${exam.title}" by ${user?.email || 'student'}`
+  );
+
+  sessionStorage.setItem(
+    'examora_last_attempt',
+    attempt.id
+  );
+
+  sessionStorage.setItem(
+    'examora_answers',
+    JSON.stringify(
+      answerDetails
+    )
+  );
+
+  sessionStorage.removeItem(
+    'examora_current_exam'
+  );
+
+  sessionStorage.removeItem(
+    'examora_reviews'
+  );
+
+  if (!automatic) {
+
+    showExamoraToast(
+      'Examination submitted successfully.',
+      'success'
+    );
+  }
+
+  setTimeout(
+    () => {
+      location.href =
+        'result.html';
+    },
+    automatic
+      ? 300
+      : 700
+  );
 }
 
 
@@ -4563,478 +3236,157 @@ function initLiveExam() {
    RESULT PAGE
    ========================================================= */
 
-function initResult() {
+function initializeResultPage() {
 
   const attemptId =
     sessionStorage.getItem(
       'examora_last_attempt'
     );
 
+  if (!attemptId) {
+
+    showExamoraToast(
+      'No examination result found.',
+      'warning'
+    );
+
+    return;
+  }
+
+  renderResult(
+    attemptId
+  );
+}
+
+
+/* =========================================================
+   RENDER RESULT
+   ========================================================= */
+
+function renderResult(
+  attemptId
+) {
+
   const db = getDB();
 
   const attempt =
     db.attempts.find(
       x =>
-        x.id === attemptId
-    );
-
-  const exam =
-    attempt &&
-    db.exams.find(
-      e =>
-        e.id ===
-        attempt.examId
+        x.id ===
+        attemptId
     );
 
   if (!attempt) {
 
-    location.href =
-      'student.html';
+    showExamoraToast(
+      'Examination result not found.',
+      'error'
+    );
 
     return;
   }
 
-  const title =
-    getElement('resultTitle');
+  const exam =
+    db.exams.find(
+      x =>
+        x.id ===
+        attempt.examId
+    );
 
-  if (title) {
+  const scoreElement =
+    getElement(
+      'resultScore'
+    );
 
-    title.textContent =
+  if (scoreElement) {
+
+    scoreElement.textContent =
+      attempt.score ??
+      0;
+  }
+
+  const totalElement =
+    getElement(
+      'resultTotal'
+    );
+
+  if (totalElement) {
+
+    totalElement.textContent =
+      attempt.totalMarks ??
+      0;
+  }
+
+  const correctElement =
+    getElement(
+      'resultCorrect'
+    );
+
+  if (correctElement) {
+
+    correctElement.textContent =
+      attempt.correctCount ??
+      0;
+  }
+
+  const incorrectElement =
+    getElement(
+      'resultIncorrect'
+    );
+
+  if (incorrectElement) {
+
+    incorrectElement.textContent =
+      attempt.incorrectCount ??
+      0;
+  }
+
+  const unansweredElement =
+    getElement(
+      'resultUnanswered'
+    );
+
+  if (unansweredElement) {
+
+    unansweredElement.textContent =
+      attempt.unansweredCount ??
+      0;
+  }
+
+  const titleElement =
+    getElement(
+      'resultExamTitle'
+    );
+
+  if (titleElement) {
+
+    titleElement.textContent =
       exam?.title ||
-      'Result';
-
+      'Examination Result';
   }
 
-  const score =
-    getElement('resultScore');
-
-  if (score) {
-    score.textContent =
-      attempt.score;
-  }
-
-  const total =
-    getElement('resultTotal');
-
-  if (total) {
-    total.textContent =
-      attempt.total;
-  }
-
-  const percent =
-    getElement('resultPercent');
-
-  if (percent) {
-
-    percent.textContent =
-      (
-        attempt.total
-          ? (
-              attempt.score /
-              attempt.total
-            ) * 100
-          : 0
-      ).toFixed(1) +
-      '%';
-
-  }
-
-  const correct =
-    getElement('resultCorrect');
-
-  if (correct) {
-
-    correct.textContent =
-      attempt.answers.filter(
-        answer =>
-          answer.isCorrect
-      ).length;
-
-  }
-
-  const status =
-    getElement('resultStatus');
-
-  if (status) {
-
-    status.textContent =
-      attempt.gradingStatus ===
-      'checked'
-        ? 'Checked'
-        : 'Under review';
-
-  }
-
-  const note =
-    getElement('resultNote');
-
-  if (note) {
-
-    note.textContent =
-      attempt.gradingStatus ===
-      'pending'
-
-        ? 'Your subjective answers have been sent to the examiner for manual checking. Your final result will update after checking.'
-
-        : 'Your objective answers were evaluated automatically.';
-
-  }
-}
-
-
-/* =========================================================
-   STUDENT HISTORY
-   ========================================================= */
-
-function renderStudentHistory() {
-
-  const db = getDB();
-
-  const attempts =
-    db.attempts.filter(
-      a =>
-        a.studentEmail ===
-        'student@example.com'
+  const percentageElement =
+    getElement(
+      'resultPercentage'
     );
 
-  const box =
-    getElement('historyList');
-
-  if (!box) return;
-
-  box.innerHTML =
-    attempts.length
-
-      ? attempts
-          .map(attempt => {
-
-            const exam =
-              db.exams.find(
-                e =>
-                  e.id ===
-                  attempt.examId
-              );
-
-            const checked =
-              attempt.gradingStatus ===
-              'checked';
-
-            return `
-
-              <div class="exam-row">
-
-                <div>
-
-                  <b>
-                    ${esc(
-                      exam?.title ||
-                      'Exam'
-                    )}
-                  </b>
-
-                  <div class="exam-meta">
-                    ${esc(
-                      attempt.submittedAt
-                    )}
-                  </div>
-
-                </div>
-
-                <span>
-                  ${
-                    checked
-                      ? `${attempt.score}/${attempt.total}`
-                      : '—'
-                  }
-                </span>
-
-                <span
-                  class="badge ${
-                    checked
-                      ? 'published'
-                      : 'review'
-                  }"
-                >
-
-                  ${
-                    checked
-                      ? 'Checked'
-                      : 'Under review'
-                  }
-
-                </span>
-
-              </div>
-
-            `;
-
-          })
-          .join('')
-
-      : `
-
-          <div class="empty">
-            No examination history.
-          </div>
-
-        `;
-}
-
-
-/* =========================================================
-   ADMIN / USER MANAGEMENT
-   ========================================================= */
-
-/*
-   IMPORTANT:
-   This is only a frontend helper.
-   Anyone who can modify the JavaScript/localStorage
-   can bypass client-side admin restrictions.
-
-   Real admin protection must be implemented
-   on a backend.
-*/
-
-const ADMIN_EMAILS = [
-  'examiner@example.com'
-];
-
-function isAdminUser() {
-
-  const db = getDB();
-
-  const email =
-    String(
-      db.user?.email || ''
-    )
-      .trim()
-      .toLowerCase();
-
-  return ADMIN_EMAILS.includes(
-    email
-  );
-}
-
-function requireAdmin() {
-
-  if (!isAdminUser()) {
-
-    alert(
-      'Access denied. Only the administrator can access this section.'
-    );
-
-    return false;
-  }
-
-  return true;
-}
-
-
-/*
-   Generic Manage button handler.
-   This prevents the "Manage" button from doing
-   absolutely nothing.
- */
-function manageUser(userId = null) {
-
-  /*
-   * If your admin page is intended only for you,
-   * check admin permission first.
-   */
-  if (!requireAdmin()) {
-    return;
-  }
-
-  const db = getDB();
-
-  /*
-   * If your HTML later passes a real user ID,
-   * this section can be expanded for editing.
-   */
-  if (!userId) {
-
-    alert(
-      'User management is available to the administrator.'
-    );
-
-    return;
-  }
-
-  const user =
-    db.users?.find(
-      u => u.id === userId
-    );
-
-  if (!user) {
-
-    alert(
-      'User was not found.'
-    );
-
-    return;
-  }
-
-  /*
-   * Basic management dialog for now.
-   */
-  const action =
-    prompt(
-      `Manage user:\n\n` +
-      `Name: ${user.name || '—'}\n` +
-      `Email: ${user.email || '—'}\n\n` +
-      `Enter:\n` +
-      `1 = View\n` +
-      `2 = Delete`
-    );
-
-  if (action === '1') {
-
-    alert(
-      `User\n\n` +
-      `Name: ${user.name || '—'}\n` +
-      `Email: ${user.email || '—'}`
-    );
-
-    return;
-  }
-
-  if (action === '2') {
-
-    if (
-      !confirm(
-        `Delete user ${user.email || user.name}?`
-      )
-    ) {
-      return;
-    }
-
-    db.users =
-      db.users.filter(
-        u =>
-          u.id !== userId
-      );
-
-    saveDB(db);
-
-    logEvent(
-      `Deleted user ${user.email || user.name}`
-    );
-
-    alert(
-      'User deleted successfully.'
-    );
-
-    /*
-     * If an admin user table exists,
-     * refresh it.
-     */
-    if (
-      typeof renderUsers ===
-      'function'
-    ) {
-      renderUsers();
-    }
-
-  }
-
-}
-
-
-/* =========================================================
-   ADMIN ACCESS HELPER
-   ========================================================= */
-
-function openAdminPortal() {
-
-  if (!requireAdmin()) {
-    return;
-  }
-
-  /*
-   * If your project has an admin.html page,
-   * this will open it.
-   */
   if (
-    location.pathname.includes(
-      'admin.html'
-    )
+    percentageElement
   ) {
-    return;
-  }
 
-  location.href =
-    'admin.html';
+    const percentage =
+      attempt.totalMarks > 0
+        ? (
+            attempt.score /
+            attempt.totalMarks
+          ) *
+          100
+        : 0;
+
+    percentageElement.textContent =
+      `${percentage.toFixed(
+        2
+      )}%`;
+  }
 }
-
-
-/* =========================================================
-   GLOBAL INITIALIZATION SUPPORT
-   ========================================================= */
-
-window.addEventListener(
-  'DOMContentLoaded',
-  () => {
-
-    restoreTheme();
-
-  }
-);
-
-
-/* =========================================================
-   GLOBAL EXPORTS
-   ========================================================= */
-
-window.toggleTheme =
-  toggleTheme;
-
-window.showView =
-  showView;
-
-window.closeQuestionModal =
-  closeQuestionModal;
-
-window.openQuestionModal =
-  openQuestionModal;
-
-window.copyRoomCode =
-  copyRoomCode;
-
-window.startExam =
-  startExam;
-
-window.viewRoom =
-  viewRoom;
-
-window.deleteExam =
-  deleteExam;
-
-window.openGrading =
-  openGrading;
-
-window.saveGrading =
-  saveGrading;
-
-window.joinExam =
-  joinExam;
-
-window.initExaminer =
-  initExaminer;
-
-window.initStudent =
-  initStudent;
-
-window.initLiveExam =
-  initLiveExam;
-
-window.initResult =
-  initResult;
-
-window.manageUser =
-  manageUser;
-
-window.openAdminPortal =
-  openAdminPortal;
-
-window.isAdminUser =
-  isAdminUser;
+}
